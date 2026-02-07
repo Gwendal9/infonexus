@@ -1,0 +1,460 @@
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { SwipeableSourceCard } from '@/components/SwipeableSourceCard';
+import { AddSourceModal } from '@/components/AddSourceModal';
+import { ThemeChip } from '@/components/ThemeChip';
+import { AddThemeModal } from '@/components/AddThemeModal';
+import { useSources } from '@/lib/queries/useSources';
+import { useThemes } from '@/lib/queries/useThemes';
+import { useAllSourceThemes } from '@/lib/queries/useSourceThemes';
+import { useAddSource, useDeleteSource } from '@/lib/mutations/useSourceMutations';
+import {
+  useAddTheme,
+  useDeleteTheme,
+  useAssignThemeToSource,
+} from '@/lib/mutations/useThemeMutations';
+import { SourceType } from '@/types/database';
+import { useColors } from '@/contexts/ThemeContext';
+import { spacing } from '@/theme/spacing';
+import { typography } from '@/theme/typography';
+
+export default function SourcesScreen() {
+  const colors = useColors();
+  const [sourceModalVisible, setSourceModalVisible] = useState(false);
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [assignThemeSourceId, setAssignThemeSourceId] = useState<string | null>(null);
+
+  const styles = createStyles(colors);
+
+  const { data: sources, isLoading, refetch, isRefetching } = useSources();
+  const { data: themes, refetch: refetchThemes } = useThemes();
+  const { data: sourceThemes, refetch: refetchSourceThemes } = useAllSourceThemes();
+
+  const addSource = useAddSource();
+  const deleteSource = useDeleteSource();
+  const addTheme = useAddTheme();
+  const deleteTheme = useDeleteTheme();
+  const assignTheme = useAssignThemeToSource();
+
+  const handleAddSource = async (url: string, name: string, type: SourceType) => {
+    try {
+      await addSource.mutateAsync({ url, name, type });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSourceModalVisible(false);
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+
+  const handleAddTheme = async (name: string, color: string) => {
+    try {
+      await addTheme.mutateAsync({ name, color });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setThemeModalVisible(false);
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+
+  const handleToggleTheme = async (sourceId: string, themeId: string) => {
+    const currentThemes = sourceThemes?.get(sourceId) ?? [];
+    const isAssigned = currentThemes.includes(themeId);
+
+    Haptics.selectionAsync();
+    try {
+      await assignTheme.mutateAsync({ sourceId, themeId, assign: !isAssigned });
+      await refetchSourceThemes();
+    } catch (e: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Erreur', e.message || 'Erreur inconnue');
+    }
+  };
+
+  const selectedSource = sources?.find(s => s.id === assignThemeSourceId);
+  const selectedSourceThemes = assignThemeSourceId ? (sourceThemes?.get(assignThemeSourceId) ?? []) : [];
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Themes Section */}
+      <View style={styles.themesSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Thèmes</Text>
+          <TouchableOpacity onPress={() => setThemeModalVisible(true)}>
+            <Ionicons name="add-circle" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        {themes && themes.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.themesRow}>
+              {themes.map((theme) => (
+                <ThemeChip
+                  key={theme.id}
+                  theme={theme}
+                  showDelete
+                  onDelete={() => deleteTheme.mutate(theme.id)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        ) : (
+          <Text style={styles.noThemes}>Aucun thème. Créez-en pour organiser vos sources.</Text>
+        )}
+      </View>
+
+      {/* Sources List */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => {
+              refetch();
+              refetchThemes();
+              refetchSourceThemes();
+            }}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        {sources && sources.length > 0 ? (
+          <>
+            <View style={styles.swipeHintContainer}>
+              <Ionicons name="arrow-back" size={12} color={colors.textMuted} />
+              <Text style={styles.swipeHint}>Glissez pour supprimer</Text>
+            </View>
+            {sources.map((source) => {
+              const assignedThemeIds = sourceThemes?.get(source.id) ?? [];
+              const assignedThemes = themes?.filter(t => assignedThemeIds.includes(t.id)) ?? [];
+
+              return (
+                <View key={source.id} style={styles.sourceContainer}>
+                  <SwipeableSourceCard
+                    source={source}
+                    onDelete={() => deleteSource.mutate(source.id)}
+                    onPress={() => setAssignThemeSourceId(source.id)}
+                  />
+                  {assignedThemes.length > 0 && (
+                    <View style={styles.assignedThemes}>
+                      {assignedThemes.map((theme) => (
+                        <View
+                          key={theme.id}
+                          style={[styles.miniChip, { backgroundColor: theme.color }]}
+                        >
+                          <Text style={styles.miniChipText}>{theme.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </>
+        ) : (
+          <View style={styles.empty}>
+            <Ionicons name="globe-outline" size={48} color={colors.textMuted} />
+            <Text style={styles.emptyTitle}>Aucune source</Text>
+            <Text style={styles.emptyText}>
+              Ajoutez vos sources RSS, sites web ou chaînes YouTube pour commencer.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      <TouchableOpacity style={styles.fab} onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setSourceModalVisible(true);
+      }}>
+        <Ionicons name="add" size={28} color={colors.surface} />
+      </TouchableOpacity>
+
+      <AddSourceModal
+        visible={sourceModalVisible}
+        onClose={() => setSourceModalVisible(false)}
+        onAdd={handleAddSource}
+        loading={addSource.isPending}
+        error={addSource.error?.message}
+        existingSourceUrls={sources?.map(s => s.url) ?? []}
+      />
+
+      <AddThemeModal
+        visible={themeModalVisible}
+        onClose={() => setThemeModalVisible(false)}
+        onAdd={handleAddTheme}
+        loading={addTheme.isPending}
+        error={addTheme.error?.message}
+      />
+
+      {/* Assign Themes Modal */}
+      {assignThemeSourceId && (
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setAssignThemeSourceId(null)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.assignModal}>
+            <View style={styles.modalHandle} />
+
+            <Text style={styles.assignModalTitle} numberOfLines={1}>
+              {selectedSource?.name}
+            </Text>
+            <Text style={styles.assignModalSubtitle}>Sélectionnez les thèmes</Text>
+
+            {themes && themes.length > 0 ? (
+              <View style={styles.themesList}>
+                {themes.map((theme) => {
+                  const isAssigned = selectedSourceThemes.includes(theme.id);
+                  return (
+                    <TouchableOpacity
+                      key={theme.id}
+                      style={[styles.themeRow, isAssigned && styles.themeRowActive]}
+                      onPress={() => handleToggleTheme(assignThemeSourceId, theme.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View
+                        style={[
+                          styles.themeColorDot,
+                          { backgroundColor: theme.color },
+                          isAssigned && styles.themeColorDotActive,
+                        ]}
+                      />
+                      <Text style={[styles.themeName, isAssigned && styles.themeNameActive]}>
+                        {theme.name}
+                      </Text>
+                      {isAssigned && (
+                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.noThemesModal}>
+                <Ionicons name="pricetags-outline" size={40} color={colors.textMuted} />
+                <Text style={styles.noThemesModalText}>
+                  Aucun thème créé
+                </Text>
+                <Text style={styles.noThemesModalHint}>
+                  Créez des thèmes depuis l'écran Sources
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+const createStyles = (colors: ReturnType<typeof useColors>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    themesSection: {
+      backgroundColor: colors.surface,
+      padding: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    sectionTitle: {
+      ...typography.titleMd,
+      color: colors.textPrimary,
+    },
+    themesRow: {
+      flexDirection: 'row',
+    },
+    noThemes: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    list: {
+      padding: spacing.md,
+      flexGrow: 1,
+    },
+    sourceContainer: {
+      marginBottom: spacing.sm,
+    },
+    assignedThemes: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: -spacing.xs,
+      marginLeft: spacing.md,
+      gap: spacing.xs,
+    },
+    miniChip: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    miniChipText: {
+      ...typography.small,
+      color: colors.surface,
+      fontWeight: '600',
+    },
+    empty: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: spacing.xxl,
+    },
+    emptyTitle: {
+      ...typography.titleLg,
+      color: colors.textPrimary,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    emptyText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: spacing.xl,
+    },
+    fab: {
+      position: 'absolute',
+      right: spacing.lg,
+      bottom: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+    },
+    modalOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      justifyContent: 'flex-end',
+    },
+    assignModal: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.xxl,
+      maxHeight: '60%',
+    },
+    modalHandle: {
+      width: 36,
+      height: 4,
+      backgroundColor: colors.border,
+      borderRadius: 2,
+      alignSelf: 'center',
+      marginTop: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    assignModalTitle: {
+      ...typography.titleLg,
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    assignModalSubtitle: {
+      ...typography.caption,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: spacing.xxs,
+      marginBottom: spacing.lg,
+    },
+    themesList: {
+      gap: spacing.sm,
+    },
+    themeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: 12,
+      backgroundColor: colors.background,
+    },
+    themeRowActive: {
+      backgroundColor: colors.primary + '12',
+    },
+    themeColorDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginRight: spacing.md,
+    },
+    themeColorDotActive: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+    },
+    themeName: {
+      ...typography.body,
+      color: colors.textSecondary,
+      flex: 1,
+    },
+    themeNameActive: {
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    noThemesModal: {
+      paddingVertical: spacing.xl,
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    noThemesModalText: {
+      ...typography.titleMd,
+      color: colors.textSecondary,
+    },
+    noThemesModalHint: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    swipeHintContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      marginBottom: spacing.sm,
+    },
+    swipeHint: {
+      ...typography.small,
+      color: colors.textMuted,
+    },
+  });

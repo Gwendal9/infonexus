@@ -1,2 +1,2 @@
-// React Context providers
-// Example: export { AuthProvider } from './AuthProvider';
+export { AuthProvider, useAuth } from './AuthProvider';
+export { QueryProvider } from './QueryProvider';

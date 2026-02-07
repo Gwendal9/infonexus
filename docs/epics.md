@@ -5,6 +5,7 @@ inputDocuments:
   - planning-artifacts/architecture.md
   - planning-artifacts/ux-design-specification.md
 date: 2026-02-05
+lastUpdated: 2026-02-07
 ---
 
 # InfoNexus - Epic Breakdown
@@ -12,6 +13,34 @@ date: 2026-02-05
 ## Overview
 
 This document provides the complete epic and story breakdown for InfoNexus, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
+
+## 🎯 Progress Summary (Updated 2026-02-07)
+
+| Epic | Status | Progress |
+|------|--------|----------|
+| Epic 1: Foundation & Authentication | ✅ **DONE** | 100% |
+| Epic 2: Source Management | ✅ **DONE** | 100% |
+| Epic 3: Content Aggregation | ✅ **DONE** | 100% |
+| Epic 4: Feed & Article Display | ✅ **DONE** | 100% |
+| Epic 5: Thematic Organization | ✅ **DONE** | 100% |
+| Epic 6: Favorites | ✅ **DONE** | 100% |
+| Epic 7: Offline & Sync | 🔲 TODO | 0% |
+
+### MVP Status: 🟢 FUNCTIONAL
+
+The app is fully functional with all core features implemented except offline mode.
+
+### Recent Improvements (2026-02-07)
+- ✅ Dark mode support across all screens
+- ✅ Toast notifications for refresh feedback
+- ✅ Swipeable source cards (swipe to delete)
+- ✅ Animated heart for favorites with burst effect
+- ✅ Improved skeleton loading with shimmer
+- ✅ Haptic feedback throughout the app
+- ✅ Screen transitions (slide animations)
+- ✅ Source catalog with 32 verified working sources
+- ✅ "Already added" indicator in source catalog
+- ✅ Unit tests for RSS parsing and source catalog
 
 ## Requirements Inventory
 
@@ -168,52 +197,100 @@ This document provides the complete epic and story breakdown for InfoNexus, deco
 
 ## Epic List
 
-### Epic 1: Foundation & Authentication
+### Epic 1: Foundation & Authentication ✅ DONE
 L'utilisateur peut créer un compte, se connecter et accéder à l'app de manière sécurisée. Cet epic inclut l'initialisation du projet avec create-expo-stack et le setup complet de Supabase (schema, RLS).
 
 **FRs covered:** FR28, FR29, FR30, FR31
 
+**Implementation Notes:**
+- Expo Router with file-based navigation
+- Supabase Auth with email/password
+- RLS policies for user data isolation
+- Onboarding flow for new users
+- Session persistence with auto-refresh
+
 ---
 
-### Epic 2: Source Management
+### Epic 2: Source Management ✅ DONE
 L'utilisateur peut configurer ses sources d'information : ajout par URL avec détection automatique du type (RSS/HTML/YouTube), assignation de thèmes, et gestion via un dashboard dédié avec indicateurs de statut.
 
 **FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7
 
+**Implementation Notes:**
+- Source catalog with 32 pre-verified French sources
+- Auto-detection of RSS/YouTube/HTML types
+- Status indicators (active/error/pending)
+- Swipeable cards for quick delete
+- Theme assignment modal
+
 ---
 
-### Epic 3: Content Aggregation
+### Epic 3: Content Aggregation ✅ DONE
 Le système récupère automatiquement les articles depuis les sources configurées via des Edge Functions Supabase. Support RSS, scraping HTML et YouTube RSS avec extraction de résumé et image.
 
 **FRs covered:** FR8, FR9, FR10, FR11, FR12, FR13, FR14
 
+**Implementation Notes:**
+- Client-side RSS parsing with fast-xml-parser
+- Basic HTML scraping support
+- YouTube channel RSS support
+- Article deduplication by URL
+- Manual refresh with toast feedback
+
 ---
 
-### Epic 4: Feed & Article Display
+### Epic 4: Feed & Article Display ✅ DONE
 L'utilisateur peut consulter son feed d'articles sous forme de cartes visuelles (image hero + titre + résumé + source), voir les détails d'un article et ouvrir l'original dans le navigateur.
 
 **FRs covered:** FR15, FR16, FR17, FR18, FR19
 
+**Implementation Notes:**
+- FlatList with optimized rendering
+- ArticleCard with hero image
+- Instant article detail (cached data)
+- Pull-to-refresh with article count toast
+- External link to original article
+
 ---
 
-### Epic 5: Thematic Organization
+### Epic 5: Thematic Organization ✅ DONE
 L'utilisateur peut créer des thèmes personnalisés, naviguer entre des dashboards thématiques via des tabs, et filtrer le feed général par thème ou par source.
 
 **FRs covered:** FR20, FR21, FR22, FR23, FR24
 
+**Implementation Notes:**
+- Custom theme creation with color picker
+- ThemeTabs horizontal navigation
+- Filter by theme shows themed sources
+- Filter by source within theme
+- Global search across all articles
+
 ---
 
-### Epic 6: Favorites
+### Epic 6: Favorites ✅ DONE
 L'utilisateur peut sauvegarder des articles en favoris pour les retrouver facilement, consulter sa liste de favoris et retirer des articles de cette liste.
 
 **FRs covered:** FR25, FR26, FR27
 
+**Implementation Notes:**
+- Animated heart with burst effect
+- Haptic feedback on toggle
+- Dedicated Favorites tab
+- Favorites synced to Supabase
+
 ---
 
-### Epic 7: Offline & Sync
+### Epic 7: Offline & Sync 🔲 TODO
 L'utilisateur peut lire ses articles même hors connexion grâce au cache local (expo-sqlite). Les données se synchronisent automatiquement avec Supabase quand la connexion est disponible.
 
 **FRs covered:** FR32, FR33, FR34, FR35
+
+**TODO:**
+- [ ] expo-sqlite local database setup
+- [ ] Article content caching
+- [ ] Offline detection and UI feedback
+- [ ] Sync queue for offline changes
+- [ ] Conflict resolution strategy
 
 ---
 

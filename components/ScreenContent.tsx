@@ -1,7 +1,7 @@
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import EditScreenInfo from "./EditScreenInfo";
+import EditScreenInfo from './EditScreenInfo';
 
 type ScreenContentProps = {
   title: string;
@@ -9,11 +9,7 @@ type ScreenContentProps = {
   children?: React.ReactNode;
 };
 
-export const ScreenContent = ({
-  title,
-  path,
-  children,
-}: ScreenContentProps) => {
+export const ScreenContent = ({ title, path, children }: ScreenContentProps) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
@@ -26,19 +22,19 @@ export const ScreenContent = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: "center",
-    backgroundColor: "white",
+    alignItems: 'center',
+    backgroundColor: 'white',
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   separator: {
-    backgroundColor: "#d1d5db",
+    backgroundColor: '#d1d5db',
     height: 1,
     marginVertical: 30,
-    width: "80%",
+    width: '80%',
   },
   title: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
 });
