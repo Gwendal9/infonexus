@@ -1,74 +1,154 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/utils/supabase';
 import { Article, Source } from '@/types/database';
+import { useNetwork } from '@/contexts/NetworkContext';
+import * as db from '@/lib/db';
 
 export interface ArticleWithSource extends Article {
   source: Source;
 }
 
 export function useArticles() {
+  const { isOnline } = useNetwork();
+
   return useQuery({
     queryKey: ['articles'],
     queryFn: async (): Promise<ArticleWithSource[]> => {
-      const { data, error } = await supabase
-        .from('articles')
-        .select(
-          `
-          *,
-          source:sources(*)
-        `
-        )
-        .order('published_at', { ascending: false, nullsFirst: false })
-        .limit(100);
+      // Try to fetch from Supabase if online
+      if (isOnline) {
+        try {
+          const { data, error } = await supabase
+            .from('articles')
+            .select(
+              `
+              *,
+              source:sources(*)
+            `
+            )
+            .order('published_at', { ascending: false, nullsFirst: false })
+            .limit(100);
 
-      if (error) throw error;
-      return (data as ArticleWithSource[]) ?? [];
+          if (error) throw error;
+
+          const articles = (data as ArticleWithSource[]) ?? [];
+
+          // Save to local DB for offline access
+          if (articles.length > 0) {
+            await db.saveArticles(articles);
+            // Also save the sources
+            const sources = articles
+              .map((a) => a.source)
+              .filter((s, i, arr) => arr.findIndex((x) => x.id === s.id) === i);
+            await db.saveSources(sources);
+          }
+
+          return articles;
+        } catch (error) {
+          console.log('[useArticles] Supabase error, falling back to local DB:', error);
+          // Fall through to local DB
+        }
+      }
+
+      // Offline or error: read from local SQLite
+      console.log('[useArticles] Reading from local DB');
+      const [localArticles, localSources] = await Promise.all([
+        db.getArticles(),
+        db.getSources(),
+      ]);
+
+      // Join articles with sources
+      const sourceMap = new Map(localSources.map((s) => [s.id, s]));
+      const articlesWithSource: ArticleWithSource[] = localArticles
+        .filter((a) => sourceMap.has(a.source_id))
+        .map((a) => ({
+          ...a,
+          source: sourceMap.get(a.source_id)!,
+        }));
+
+      return articlesWithSource;
     },
+    staleTime: isOnline ? 1000 * 60 * 2 : Infinity, // 2 min online, never stale offline
   });
 }
 
 export function useArticlesBySource(sourceId: string) {
+  const { isOnline } = useNetwork();
+
   return useQuery({
     queryKey: ['articles', 'source', sourceId],
     queryFn: async (): Promise<Article[]> => {
-      const { data, error } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('source_id', sourceId)
-        .order('published_at', { ascending: false, nullsFirst: false });
+      if (isOnline) {
+        try {
+          const { data, error } = await supabase
+            .from('articles')
+            .select('*')
+            .eq('source_id', sourceId)
+            .order('published_at', { ascending: false, nullsFirst: false });
 
-      if (error) throw error;
-      return data ?? [];
+          if (error) throw error;
+
+          const articles = data ?? [];
+          if (articles.length > 0) {
+            await db.saveArticles(articles);
+          }
+
+          return articles;
+        } catch (error) {
+          console.log('[useArticlesBySource] Supabase error, falling back to local DB:', error);
+        }
+      }
+
+      // Offline: read from local DB
+      return db.getArticlesBySourceId(sourceId);
     },
     enabled: !!sourceId,
+    staleTime: isOnline ? 1000 * 60 * 2 : Infinity,
   });
 }
 
 export function useArticleById(id: string) {
   const queryClient = useQueryClient();
+  const { isOnline } = useNetwork();
 
   return useQuery({
     queryKey: ['article', id],
     queryFn: async (): Promise<ArticleWithSource | null> => {
-      const { data, error } = await supabase
-        .from('articles')
-        .select(`
-          *,
-          source:sources(*)
-        `)
-        .eq('id', id)
-        .single();
+      if (isOnline) {
+        try {
+          const { data, error } = await supabase
+            .from('articles')
+            .select(`
+              *,
+              source:sources(*)
+            `)
+            .eq('id', id)
+            .single();
 
-      if (error) throw error;
-      return data as ArticleWithSource;
+          if (error) throw error;
+          return data as ArticleWithSource;
+        } catch (error) {
+          console.log('[useArticleById] Supabase error, falling back to local DB:', error);
+        }
+      }
+
+      // Offline: read from local DB
+      const [article, sources] = await Promise.all([
+        db.getArticleById(id),
+        db.getSources(),
+      ]);
+
+      if (!article) return null;
+
+      const source = sources.find((s) => s.id === article.source_id);
+      if (!source) return null;
+
+      return { ...article, source };
     },
     enabled: !!id,
-    // Use cached article from articles list as initial data (instant display)
     initialData: () => {
       const cachedArticles = queryClient.getQueryData<ArticleWithSource[]>(['articles']);
       return cachedArticles?.find((article) => article.id === id) ?? undefined;
     },
-    // Don't refetch if we have initial data (it's the same data)
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 }

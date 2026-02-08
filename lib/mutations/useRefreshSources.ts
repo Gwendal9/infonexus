@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/utils/supabase';
 import { parseRSSFeed } from '@/lib/services/rssParser';
 import { scrapeHTMLPage } from '@/lib/services/htmlScraper';
+import { addSourceFetchLog } from '@/lib/db';
 import { Source } from '@/types/database';
 
 interface RefreshResult {
@@ -85,6 +86,9 @@ export function useRefreshSources() {
             })
             .eq('id', source.id);
 
+          // Log successful fetch
+          await addSourceFetchLog(source.id, true, insertedCount, null);
+
           results.push({
             sourceId: source.id,
             sourceName: source.name,
@@ -102,6 +106,9 @@ export function useRefreshSources() {
               last_error: errorMessage,
             })
             .eq('id', source.id);
+
+          // Log failed fetch
+          await addSourceFetchLog(source.id, false, 0, errorMessage);
 
           results.push({
             sourceId: source.id,

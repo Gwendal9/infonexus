@@ -52,6 +52,22 @@ export interface Favorite {
   created_at: string;
 }
 
+export interface ReadArticle {
+  id: string;
+  user_id: string;
+  article_id: string;
+  read_at: string;
+}
+
+export interface SourceFetchLog {
+  id: string;
+  source_id: string;
+  success: boolean;
+  articles_count: number;
+  error: string | null;
+  fetched_at: string;
+}
+
 // Extended types with relations
 export interface SourceWithThemes extends Source {
   themes?: Theme[];

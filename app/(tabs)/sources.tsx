@@ -15,6 +15,7 @@ import { SwipeableSourceCard } from '@/components/SwipeableSourceCard';
 import { AddSourceModal } from '@/components/AddSourceModal';
 import { ThemeChip } from '@/components/ThemeChip';
 import { AddThemeModal } from '@/components/AddThemeModal';
+import { SourceHealthModal } from '@/components/SourceHealthModal';
 import { useSources } from '@/lib/queries/useSources';
 import { useThemes } from '@/lib/queries/useThemes';
 import { useAllSourceThemes } from '@/lib/queries/useSourceThemes';
@@ -34,6 +35,7 @@ export default function SourcesScreen() {
   const [sourceModalVisible, setSourceModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [assignThemeSourceId, setAssignThemeSourceId] = useState<string | null>(null);
+  const [healthSourceId, setHealthSourceId] = useState<string | null>(null);
 
   const styles = createStyles(colors);
 
@@ -83,6 +85,7 @@ export default function SourcesScreen() {
 
   const selectedSource = sources?.find(s => s.id === assignThemeSourceId);
   const selectedSourceThemes = assignThemeSourceId ? (sourceThemes?.get(assignThemeSourceId) ?? []) : [];
+  const healthSource = sources?.find(s => s.id === healthSourceId);
 
   if (isLoading) {
     return (
@@ -152,6 +155,7 @@ export default function SourcesScreen() {
                     source={source}
                     onDelete={() => deleteSource.mutate(source.id)}
                     onPress={() => setAssignThemeSourceId(source.id)}
+                    onHealthPress={() => setHealthSourceId(source.id)}
                   />
                   {assignedThemes.length > 0 && (
                     <View style={styles.assignedThemes}>
@@ -204,9 +208,18 @@ export default function SourcesScreen() {
         error={addTheme.error?.message}
       />
 
+      {/* Source Health Modal */}
+      {healthSource && (
+        <SourceHealthModal
+          source={healthSource}
+          onClose={() => setHealthSourceId(null)}
+        />
+      )}
+
       {/* Assign Themes Modal */}
       {assignThemeSourceId && (
         <TouchableOpacity
+          key={assignThemeSourceId}
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setAssignThemeSourceId(null)}

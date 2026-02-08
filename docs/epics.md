@@ -24,11 +24,11 @@ This document provides the complete epic and story breakdown for InfoNexus, deco
 | Epic 4: Feed & Article Display | ✅ **DONE** | 100% |
 | Epic 5: Thematic Organization | ✅ **DONE** | 100% |
 | Epic 6: Favorites | ✅ **DONE** | 100% |
-| Epic 7: Offline & Sync | 🔲 TODO | 0% |
+| Epic 7: Offline & Sync | ✅ **DONE** | 100% |
 
-### MVP Status: 🟢 FUNCTIONAL
+### MVP Status: 🟢 COMPLETE
 
-The app is fully functional with all core features implemented except offline mode.
+The app is fully functional with all core features implemented including offline mode.
 
 ### Recent Improvements (2026-02-07)
 - ✅ Dark mode support across all screens
@@ -41,6 +41,11 @@ The app is fully functional with all core features implemented except offline mo
 - ✅ Source catalog with 32 verified working sources
 - ✅ "Already added" indicator in source catalog
 - ✅ Unit tests for RSS parsing and source catalog
+- ✅ **Offline mode with expo-sqlite local cache**
+- ✅ **Offline-first data fetching pattern**
+- ✅ **Sync queue for offline mutations**
+- ✅ **Auto-sync when connection restored**
+- ✅ **Offline banner UI indicator**
 
 ## Requirements Inventory
 
@@ -280,17 +285,19 @@ L'utilisateur peut sauvegarder des articles en favoris pour les retrouver facile
 
 ---
 
-### Epic 7: Offline & Sync 🔲 TODO
+### Epic 7: Offline & Sync ✅ DONE
 L'utilisateur peut lire ses articles même hors connexion grâce au cache local (expo-sqlite). Les données se synchronisent automatiquement avec Supabase quand la connexion est disponible.
 
 **FRs covered:** FR32, FR33, FR34, FR35
 
-**TODO:**
-- [ ] expo-sqlite local database setup
-- [ ] Article content caching
-- [ ] Offline detection and UI feedback
-- [ ] Sync queue for offline changes
-- [ ] Conflict resolution strategy
+**Implementation Notes:**
+- expo-sqlite local database with mirror schema
+- Offline-first pattern for all queries
+- Network detection with @react-native-community/netinfo
+- Offline banner UI feedback
+- Sync queue for offline mutations
+- Auto-sync when connection restored
+- Last-write-wins conflict resolution
 
 ---
 

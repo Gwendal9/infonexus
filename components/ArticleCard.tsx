@@ -13,6 +13,7 @@ interface ArticleCardProps {
   onPress: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  isRead?: boolean;
   index?: number;
 }
 
@@ -28,7 +29,7 @@ function formatDate(dateString: string | null): string {
   return `${day} ${month} à ${hours}:${minutes}`;
 }
 
-export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, index = 0 }: ArticleCardProps) {
+export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, isRead, index = 0 }: ArticleCardProps) {
   const colors = useColors();
   const styles = createStyles(colors);
   const hasImage = !!article.image_url;
@@ -40,7 +41,11 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, in
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
-      <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.card, isRead && styles.cardRead]}
+        onPress={handlePress}
+        activeOpacity={0.8}
+      >
         {hasImage && (
           <View style={styles.imageContainer}>
             <Image source={{ uri: article.image_url! }} style={styles.image} resizeMode="cover" />
@@ -60,8 +65,8 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, in
         <View style={styles.content}>
           <View style={styles.sourceRow}>
             <View style={styles.sourceInfo}>
-              <View style={styles.sourceDot} />
-              <Text style={styles.sourceName} numberOfLines={1}>
+              {!isRead && <View style={styles.unreadDot} />}
+              <Text style={[styles.sourceName, isRead && styles.textRead]} numberOfLines={1}>
                 {article.source?.name || 'Source inconnue'}
               </Text>
             </View>
@@ -78,12 +83,12 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, in
             </View>
           </View>
 
-          <Text style={styles.title} numberOfLines={3}>
+          <Text style={[styles.title, isRead && styles.titleRead]} numberOfLines={3}>
             {article.title}
           </Text>
 
           {article.summary && (
-            <Text style={styles.summary} numberOfLines={2}>
+            <Text style={[styles.summary, isRead && styles.textRead]} numberOfLines={2}>
               {article.summary}
             </Text>
           )}
@@ -105,6 +110,9 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       shadowOpacity: 0.08,
       shadowRadius: 12,
       elevation: 4,
+    },
+    cardRead: {
+      opacity: 0.7,
     },
     imageContainer: {
       position: 'relative',
@@ -145,7 +153,7 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       gap: spacing.sm,
       flex: 1,
     },
-    sourceDot: {
+    unreadDot: {
       width: 8,
       height: 8,
       borderRadius: 4,
@@ -176,9 +184,15 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       marginBottom: spacing.xs,
       lineHeight: 24,
     },
+    titleRead: {
+      color: colors.textSecondary,
+    },
     summary: {
       ...typography.body,
       color: colors.textSecondary,
       lineHeight: 20,
+    },
+    textRead: {
+      color: colors.textMuted,
     },
   });

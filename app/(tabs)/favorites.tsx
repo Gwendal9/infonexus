@@ -10,7 +10,9 @@ import { ArticleCard } from '@/components/ArticleCard';
 import { ArticleCardSkeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { useFavorites } from '@/lib/queries/useFavorites';
+import { useReadArticleIds } from '@/lib/queries/useReadArticles';
 import { useToggleFavorite } from '@/lib/mutations/useFavoriteMutations';
+import { useMarkAsRead } from '@/lib/mutations/useReadMutations';
 import { ArticleWithSource } from '@/lib/queries/useArticles';
 import { useColors } from '@/contexts/ThemeContext';
 import { spacing } from '@/theme/spacing';
@@ -19,13 +21,18 @@ export default function FavoritesScreen() {
   const colors = useColors();
   const router = useRouter();
   const { data: favorites, isLoading, refetch, isRefetching } = useFavorites();
+  const { data: readArticleIds } = useReadArticleIds();
   const toggleFavorite = useToggleFavorite();
+  const markAsRead = useMarkAsRead();
 
   const styles = createStyles(colors);
 
   const handleArticlePress = useCallback((article: ArticleWithSource) => {
+    if (!readArticleIds?.has(article.id)) {
+      markAsRead.mutate(article.id);
+    }
     router.push(`/article/${article.id}`);
-  }, [router]);
+  }, [router, readArticleIds, markAsRead]);
 
   const handleRemoveFavorite = useCallback(
     (articleId: string) => {
@@ -56,6 +63,7 @@ export default function FavoritesScreen() {
             onPress={() => handleArticlePress(item)}
             isFavorite={true}
             onToggleFavorite={() => handleRemoveFavorite(item.id)}
+            isRead={readArticleIds?.has(item.id)}
             index={index}
           />
         )}

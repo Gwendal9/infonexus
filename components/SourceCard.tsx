@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Source } from '@/types/database';
+import { SourceHealthBadge } from './SourceHealthBadge';
 import { useColors } from '@/contexts/ThemeContext';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -9,6 +10,7 @@ interface SourceCardProps {
   source: Source;
   onDelete: () => void;
   onPress?: () => void;
+  onHealthPress?: () => void;
 }
 
 const typeIcons = {
@@ -33,7 +35,7 @@ function getRelativeTime(date: string): string {
   return past.toLocaleDateString('fr-FR');
 }
 
-export function SourceCard({ source, onDelete, onPress }: SourceCardProps) {
+export function SourceCard({ source, onDelete, onPress, onHealthPress }: SourceCardProps) {
   const colors = useColors();
   const styles = createStyles(colors);
 
@@ -64,6 +66,9 @@ export function SourceCard({ source, onDelete, onPress }: SourceCardProps) {
           <Text style={styles.name} numberOfLines={1}>
             {source.name}
           </Text>
+          <TouchableOpacity onPress={onHealthPress} disabled={!onHealthPress}>
+            <SourceHealthBadge sourceId={source.id} compact />
+          </TouchableOpacity>
           <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
             <Ionicons name={statusIcon as any} size={12} color={statusColor} />
             <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>

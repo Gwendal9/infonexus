@@ -2,9 +2,10 @@ import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/contexts/ThemeContext';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { spacing } from '@/theme/spacing';
 
-type IconName = 'newspaper' | 'globe' | 'heart' | 'settings';
+type IconName = 'newspaper' | 'globe' | 'heart' | 'grid' | 'settings';
 
 export default function TabsLayout() {
   const colors = useColors();
@@ -21,54 +22,68 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarStyle: styles.tabBar,
-        headerStyle: styles.header,
-        headerTitleStyle: styles.headerTitle,
-        headerTintColor: colors.textPrimary,
-        headerShadowVisible: false,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Feed',
-          headerTitle: 'InfoNexus',
-          tabBarIcon: ({ focused }) => <TabIcon name="newspaper" focused={focused} />,
+    <View style={styles.container}>
+      <OfflineBanner />
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
+          tabBarShowLabel: true,
+          tabBarLabelStyle: styles.tabLabel,
+          tabBarStyle: styles.tabBar,
+          headerStyle: styles.header,
+          headerTitleStyle: styles.headerTitle,
+          headerTintColor: colors.textPrimary,
+          headerShadowVisible: false,
         }}
-      />
-      <Tabs.Screen
-        name="sources"
-        options={{
-          title: 'Sources',
-          tabBarIcon: ({ focused }) => <TabIcon name="globe" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="favorites"
-        options={{
-          title: 'Favoris',
-          tabBarIcon: ({ focused }) => <TabIcon name="heart" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Réglages',
-          tabBarIcon: ({ focused }) => <TabIcon name="settings" focused={focused} />,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Feed',
+            headerTitle: 'InfoNexus',
+            tabBarIcon: ({ focused }) => <TabIcon name="newspaper" focused={focused} />,
+          }}
+        />
+        <Tabs.Screen
+          name="sources"
+          options={{
+            title: 'Sources',
+            tabBarIcon: ({ focused }) => <TabIcon name="globe" focused={focused} />,
+          }}
+        />
+        <Tabs.Screen
+          name="favorites"
+          options={{
+            title: 'Favoris',
+            tabBarIcon: ({ focused }) => <TabIcon name="heart" focused={focused} />,
+          }}
+        />
+        <Tabs.Screen
+          name="widgets"
+          options={{
+            title: 'Widgets',
+            tabBarIcon: ({ focused }) => <TabIcon name="grid" focused={focused} />,
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: 'Réglages',
+            tabBarIcon: ({ focused }) => <TabIcon name="settings" focused={focused} />,
+          }}
+        />
+      </Tabs>
+    </View>
   );
 }
 
 const createStyles = (colors: ReturnType<typeof useColors>) =>
   StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
     tabBar: {
       backgroundColor: colors.surface,
       borderTopWidth: 0,
