@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WidgetContainer } from './WidgetContainer';
@@ -29,13 +29,7 @@ export function FinanceWidget({ compact, expanded }: FinanceWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    fetchCryptoData();
-    const interval = setInterval(fetchCryptoData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [currencies]);
-
-  const fetchCryptoData = async () => {
+  const fetchCryptoData = useCallback(async () => {
     try {
       setLoading(true);
       setError(false);
@@ -64,7 +58,13 @@ export function FinanceWidget({ compact, expanded }: FinanceWidgetProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currencies]);
+
+  useEffect(() => {
+    fetchCryptoData();
+    const interval = setInterval(fetchCryptoData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchCryptoData]);
 
   const styles = createStyles(colors, compact, expanded);
 

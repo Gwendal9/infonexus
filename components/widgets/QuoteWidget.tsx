@@ -48,7 +48,7 @@ export function QuoteWidget({ compact, expanded }: QuoteWidgetProps) {
     return (
       <WidgetContainer title="Citation" icon="bulb" iconColor="#FFB800" compact>
         <View style={styles.compactContent}>
-          <Text style={styles.compactQuote}>"{truncatedQuote}"</Text>
+          <Text style={styles.compactQuote}>{"\u00AB"}{truncatedQuote}{"\u00BB"}</Text>
           <Text style={styles.compactAuthor}>— {quote.author}</Text>
         </View>
       </WidgetContainer>
@@ -59,7 +59,7 @@ export function QuoteWidget({ compact, expanded }: QuoteWidgetProps) {
   return (
     <WidgetContainer title="Citation du jour" icon="bulb" iconColor="#FFB800" expanded={expanded}>
       <View style={styles.content}>
-        <Text style={styles.quote}>"{quote.text}"</Text>
+        <Text style={styles.quote}>{"\u00AB"}{quote.text}{"\u00BB"}</Text>
         <Text style={styles.author}>— {quote.author}</Text>
       </View>
     </WidgetContainer>

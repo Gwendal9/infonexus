@@ -302,11 +302,13 @@ Pour une publication future sur les stores :
 
 ### Post-MVP Features
 
-**Phase 2 (Growth) :**
-- Widgets spécialisés (score sport, graphique finance)
-- Source health avec indicateurs visuels
+**Phase 2 (Growth) — DONE :**
+- ✅ Widgets spécialisés (Météo, Crypto, Football, Bourse, Actu GNews, Mot du jour, Citation)
+- ✅ Source health avec indicateurs visuels
+- ✅ Recherche globale dans les articles
+- ✅ Sujets personnalisés — filtrage par mots-clés (SQLite local + GNews API), 100 groupes suggérés, cache 1h, budget 80 req/jour
+- ✅ Palette de 24 couleurs partagée (thèmes + sujets)
 - Issues automatiques pour debug Claude
-- Recherche globale dans les articles
 - Instagram (scraping)
 - Raspberry Pi + cron automatique
 

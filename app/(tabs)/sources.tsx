@@ -15,6 +15,7 @@ import { SwipeableSourceCard } from '@/components/SwipeableSourceCard';
 import { AddSourceModal } from '@/components/AddSourceModal';
 import { ThemeChip } from '@/components/ThemeChip';
 import { AddThemeModal } from '@/components/AddThemeModal';
+import { AddTopicModal } from '@/components/AddTopicModal';
 import { SourceHealthModal } from '@/components/SourceHealthModal';
 import { useSources } from '@/lib/queries/useSources';
 import { useThemes } from '@/lib/queries/useThemes';
@@ -27,6 +28,8 @@ import {
 } from '@/lib/mutations/useThemeMutations';
 import { SourceType } from '@/types/database';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTopics } from '@/contexts/TopicContext';
+import { Topic } from '@/lib/topics/types';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
@@ -34,10 +37,14 @@ export default function SourcesScreen() {
   const colors = useColors();
   const [sourceModalVisible, setSourceModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [topicModalVisible, setTopicModalVisible] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<Topic | undefined>();
   const [assignThemeSourceId, setAssignThemeSourceId] = useState<string | null>(null);
   const [healthSourceId, setHealthSourceId] = useState<string | null>(null);
 
   const styles = createStyles(colors);
+
+  const { config: topicConfig, addTopic, updateTopic, deleteTopic } = useTopics();
 
   const { data: sources, isLoading, refetch, isRefetching } = useSources();
   const { data: themes, refetch: refetchThemes } = useThemes();
@@ -120,6 +127,43 @@ export default function SourcesScreen() {
           </ScrollView>
         ) : (
           <Text style={styles.noThemes}>Aucun thème. Créez-en pour organiser vos sources.</Text>
+        )}
+      </View>
+
+      {/* Topics Section */}
+      <View style={styles.themesSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Sujets</Text>
+          <TouchableOpacity onPress={() => {
+            setEditingTopic(undefined);
+            setTopicModalVisible(true);
+          }}>
+            <Ionicons name="add-circle" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        {topicConfig.topics.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.themesRow}>
+              {topicConfig.topics.map((topic) => (
+                <TouchableOpacity
+                  key={topic.id}
+                  style={[styles.topicChip, { borderColor: topic.color }]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setEditingTopic(topic);
+                    setTopicModalVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.topicDot, { backgroundColor: topic.color }]} />
+                  <Text style={styles.topicChipText}>{topic.name}</Text>
+                  <Text style={styles.topicKeywordCount}>{topic.keywords.length}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        ) : (
+          <Text style={styles.noThemes}>Aucun sujet. Créez-en pour filtrer vos articles par mots-clés.</Text>
         )}
       </View>
 
@@ -208,6 +252,18 @@ export default function SourcesScreen() {
         error={addTheme.error?.message}
       />
 
+      <AddTopicModal
+        visible={topicModalVisible}
+        onClose={() => {
+          setTopicModalVisible(false);
+          setEditingTopic(undefined);
+        }}
+        onAdd={addTopic}
+        onUpdate={(id, updates) => updateTopic(id, updates)}
+        onDelete={deleteTopic}
+        topic={editingTopic}
+      />
+
       {/* Source Health Modal */}
       {healthSource && (
         <SourceHealthModal
@@ -267,7 +323,7 @@ export default function SourcesScreen() {
                   Aucun thème créé
                 </Text>
                 <Text style={styles.noThemesModalHint}>
-                  Créez des thèmes depuis l'écran Sources
+                  Créez des thèmes depuis l{"'"}écran Sources
                 </Text>
               </View>
             )}
@@ -458,6 +514,33 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
     noThemesModalHint: {
       ...typography.caption,
       color: colors.textMuted,
+    },
+    topicChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: 20,
+      borderWidth: 1.5,
+      backgroundColor: colors.surface,
+      marginRight: spacing.sm,
+      marginBottom: spacing.sm,
+      gap: spacing.xs,
+    },
+    topicDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    topicChipText: {
+      ...typography.caption,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    topicKeywordCount: {
+      ...typography.small,
+      color: colors.textMuted,
+      fontSize: 10,
     },
     swipeHintContainer: {
       flexDirection: 'row',

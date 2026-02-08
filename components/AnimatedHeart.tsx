@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, View } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -7,7 +6,6 @@ import Animated, {
   withSequence,
   withTiming,
   withDelay,
-  runOnJS,
   Easing,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';

@@ -33,6 +33,7 @@ jest.mock('@/lib/db/operations', () => ({
   updateSyncQueueItemError: mockUpdateSyncQueueItemError,
 }));
 
+// eslint-disable-next-line import/first
 import { pullFromSupabase, processSyncQueue, fullSync } from '@/lib/sync/syncManager';
 
 describe('Sync Manager', () => {

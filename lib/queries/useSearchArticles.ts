@@ -56,7 +56,7 @@ export function useSearchArticles(query: string, enabled: boolean = true) {
 async function fallbackSearch(
   query: string,
   sourceIds: string[],
-  sources: Array<{ id: string; name: string; type: string }>
+  sources: { id: string; name: string; type: string }[]
 ): Promise<SearchResult[]> {
   const searchPattern = `%${query.trim()}%`;
 

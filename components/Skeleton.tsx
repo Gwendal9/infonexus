@@ -37,7 +37,6 @@ export function Skeleton({ width = '100%', height = 20, borderRadius = 8, style,
 
   const animatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(shimmer.value, [0, 0.5, 1], [0.3, 0.6, 0.3]);
-    const translateX = interpolate(shimmer.value, [0, 1], [-100, 100]);
 
     return {
       opacity,

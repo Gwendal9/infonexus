@@ -20,8 +20,10 @@ import { ArticleCard } from '@/components/ArticleCard';
 import { ArticleCardSkeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/Button';
+import { TopicArticleList } from '@/components/TopicArticleList';
+import { AddTopicModal } from '@/components/AddTopicModal';
 import { useArticles, ArticleWithSource } from '@/lib/queries/useArticles';
-import { useSearchArticles, SearchResult } from '@/lib/queries/useSearchArticles';
+import { useSearchArticles } from '@/lib/queries/useSearchArticles';
 import { useFavoriteIds } from '@/lib/queries/useFavorites';
 import { useThemes } from '@/lib/queries/useThemes';
 import { useAllSourceThemes } from '@/lib/queries/useSourceThemes';
@@ -32,8 +34,12 @@ import { useMarkAsRead } from '@/lib/mutations/useReadMutations';
 import { useAutoRefresh } from '@/lib/hooks/useAutoRefresh';
 import { useColors } from '@/contexts/ThemeContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useTopics } from '@/contexts/TopicContext';
+import { Topic } from '@/lib/topics/types';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
+
+type FeedTab = { id: string | null; name: string; color: string; type: 'all' | 'theme' | 'topic' };
 
 export default function FeedScreen() {
   const colors = useColors();
@@ -41,10 +47,14 @@ export default function FeedScreen() {
   const { width } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
+  const [topicModalVisible, setTopicModalVisible] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<Topic | undefined>();
   const pagerRef = useRef<PagerView>(null);
   const tabsScrollRef = useRef<ScrollView>(null);
 
   const styles = createStyles(colors);
+
+  const { config: topicConfig, addTopic, updateTopic, deleteTopic } = useTopics();
 
   const { data: articles, isLoading, refetch, isRefetching } = useArticles();
   const { data: favoriteIds } = useFavoriteIds();
@@ -74,16 +84,17 @@ export default function FeedScreen() {
     },
   });
 
-  // Build tabs: "Tous" + themes
+  // Build tabs: "Tous" + themes + topics
   const allTabs = useMemo(() => {
-    const tabs: Array<{ id: string | null; name: string; color: string }> = [
-      { id: null, name: 'Tous', color: colors.primary },
+    const tabs: FeedTab[] = [
+      { id: null, name: 'Tous', color: colors.primary, type: 'all' },
     ];
     if (themes) {
-      themes.forEach((t) => tabs.push({ id: t.id, name: t.name, color: t.color }));
+      themes.forEach((t) => tabs.push({ id: t.id, name: t.name, color: t.color, type: 'theme' }));
     }
+    topicConfig.topics.forEach((t) => tabs.push({ id: t.id, name: t.name, color: t.color, type: 'topic' }));
     return tabs;
-  }, [themes, colors.primary]);
+  }, [themes, colors.primary, topicConfig.topics]);
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -244,8 +255,8 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* Theme Tabs */}
-      {allTabs.length > 1 && (
+      {/* Tabs: Tous + themes + topics */}
+      {(allTabs.length > 1 || topicConfig.topics.length > 0) && (
         <View style={styles.tabsContainer}>
           <ScrollView
             ref={tabsScrollRef}
@@ -255,11 +266,20 @@ export default function FeedScreen() {
           >
             {allTabs.map((tab, index) => {
               const isSelected = index === currentPage;
+              const tabKey = tab.type === 'topic' ? `topic-${tab.id}` : tab.type === 'theme' ? `theme-${tab.id}` : 'all';
               return (
                 <TouchableOpacity
-                  key={tab.id ?? 'all'}
+                  key={tabKey}
                   style={styles.tab}
                   onPress={() => handleTabPress(index)}
+                  onLongPress={tab.type === 'topic' ? () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    const t = topicConfig.topics.find((tp) => tp.id === tab.id);
+                    if (t) {
+                      setEditingTopic(t);
+                      setTopicModalVisible(true);
+                    }
+                  } : undefined}
                   activeOpacity={0.7}
                 >
                   <Text
@@ -282,6 +302,18 @@ export default function FeedScreen() {
                 </TouchableOpacity>
               );
             })}
+
+            {/* Add topic button */}
+            <TouchableOpacity
+              style={styles.addTopicTab}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setEditingTopic(undefined);
+                setTopicModalVisible(true);
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
           </ScrollView>
 
           {/* Swipe hint */}
@@ -298,23 +330,42 @@ export default function FeedScreen() {
         initialPage={0}
         onPageSelected={handlePageSelected}
       >
-        {allTabs.map((tab, index) => (
-          <View key={tab.id ?? 'all'} style={styles.page}>
-            <ThemeArticleList
-              themeId={tab.id}
-              articles={getArticlesForTheme(tab.id)}
-              favoriteIds={favoriteIds}
-              readArticleIds={readArticleIds}
-              isRefreshing={isRefreshing}
-              isPending={refreshSources.isPending}
-              onRefresh={handleRefresh}
-              onArticlePress={handleArticlePress}
-              onToggleFavorite={handleToggleFavorite}
-              colors={colors}
-            />
-          </View>
-        ))}
+        {allTabs.map((tab) => {
+          const tabKey = tab.type === 'topic' ? `topic-${tab.id}` : tab.type === 'theme' ? `theme-${tab.id}` : 'all';
+          return (
+            <View key={tabKey} style={styles.page}>
+              {tab.type === 'topic' && tab.id ? (
+                <TopicArticleList topicId={tab.id} />
+              ) : (
+                <ThemeArticleList
+                  themeId={tab.id}
+                  articles={getArticlesForTheme(tab.id)}
+                  favoriteIds={favoriteIds}
+                  readArticleIds={readArticleIds}
+                  isRefreshing={isRefreshing}
+                  isPending={refreshSources.isPending}
+                  onRefresh={handleRefresh}
+                  onArticlePress={handleArticlePress}
+                  onToggleFavorite={handleToggleFavorite}
+                  colors={colors}
+                />
+              )}
+            </View>
+          );
+        })}
       </PagerView>
+
+      <AddTopicModal
+        visible={topicModalVisible}
+        onClose={() => {
+          setTopicModalVisible(false);
+          setEditingTopic(undefined);
+        }}
+        onAdd={addTopic}
+        onUpdate={(id, updates) => updateTopic(id, updates)}
+        onDelete={deleteTopic}
+        topic={editingTopic}
+      />
     </View>
   );
 }
@@ -460,6 +511,11 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       right: spacing.lg,
       height: 3,
       borderRadius: 1.5,
+    },
+    addTopicTab: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      justifyContent: 'center',
     },
     swipeHint: {
       paddingRight: spacing.md,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WidgetContainer } from './WidgetContainer';
@@ -13,12 +13,15 @@ interface WeatherData {
   temperatureMin: number;
   weatherCode: number;
   isDay: boolean;
-  forecast?: Array<{
+  windGusts: number;
+  forecast?: {
     date: string;
     tempMax: number;
     tempMin: number;
     weatherCode: number;
-  }>;
+    windGustsMax: number;
+    precipProbability: number;
+  }[];
 }
 
 const getWeatherInfo = (code: number, isDay: boolean): { icon: string; label: string } => {
@@ -51,18 +54,14 @@ export function WeatherWidget({ compact, expanded }: WeatherWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    fetchWeather();
-  }, [latitude, longitude, showForecast, expanded]);
-
-  const fetchWeather = async () => {
+  const fetchWeather = useCallback(async () => {
     try {
       setLoading(true);
       setError(false);
 
       const forecastDays = (showForecast || expanded) ? 5 : 1;
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=${forecastDays}`
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day,wind_gusts_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,wind_gusts_10m_max,precipitation_probability_max&timezone=auto&forecast_days=${forecastDays}`
       );
 
       if (!response.ok) throw new Error('Failed to fetch weather');
@@ -75,6 +74,7 @@ export function WeatherWidget({ compact, expanded }: WeatherWidgetProps) {
         temperatureMin: Math.round(data.daily.temperature_2m_min[0]),
         weatherCode: data.current.weather_code,
         isDay: data.current.is_day === 1,
+        windGusts: Math.round(data.current.wind_gusts_10m ?? 0),
       };
 
       if ((showForecast || expanded) && data.daily.time.length > 1) {
@@ -83,6 +83,8 @@ export function WeatherWidget({ compact, expanded }: WeatherWidgetProps) {
           tempMax: Math.round(data.daily.temperature_2m_max[i + 1]),
           tempMin: Math.round(data.daily.temperature_2m_min[i + 1]),
           weatherCode: data.daily.weather_code[i + 1],
+          windGustsMax: Math.round(data.daily.wind_gusts_10m_max?.[i + 1] ?? 0),
+          precipProbability: Math.round(data.daily.precipitation_probability_max?.[i + 1] ?? 0),
         }));
       }
 
@@ -93,7 +95,11 @@ export function WeatherWidget({ compact, expanded }: WeatherWidgetProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [latitude, longitude, showForecast, expanded]);
+
+  useEffect(() => {
+    fetchWeather();
+  }, [fetchWeather]);
 
   const styles = createStyles(colors, compact, expanded);
 
@@ -129,12 +135,16 @@ export function WeatherWidget({ compact, expanded }: WeatherWidgetProps) {
           />
           <Text style={styles.compactTemp}>{weather.temperature}°</Text>
           <Text style={styles.compactCondition}>{weatherInfo.label}</Text>
+          <View style={styles.compactGusts}>
+            <Ionicons name="flag" size={10} color={colors.textMuted} />
+            <Text style={styles.compactGustsText}>{weather.windGusts} km/h</Text>
+          </View>
         </View>
       </WidgetContainer>
     );
   }
 
-  // Expanded mode - full details
+  // Normal/expanded mode
   return (
     <WidgetContainer title={city} icon="location" expanded={expanded}>
       <View style={styles.content}>
@@ -150,6 +160,9 @@ export function WeatherWidget({ compact, expanded }: WeatherWidgetProps) {
             <Text style={styles.minMax}>
               Min {weather.temperatureMin}° / Max {weather.temperatureMax}°
             </Text>
+            <Text style={styles.gusts}>
+              Rafales : {weather.windGusts} km/h
+            </Text>
           </View>
         </View>
 
@@ -158,16 +171,24 @@ export function WeatherWidget({ compact, expanded }: WeatherWidgetProps) {
             {weather.forecast.map((day) => {
               const dayInfo = getWeatherInfo(day.weatherCode, true);
               return (
-                <View key={day.date} style={styles.forecastDay}>
+                <View key={day.date} style={styles.forecastRow}>
                   <Text style={styles.dayName}>{getDayName(day.date)}</Text>
                   <Ionicons
                     name={dayInfo.icon as any}
-                    size={expanded ? 28 : 18}
+                    size={expanded ? 24 : 18}
                     color={colors.textSecondary}
                   />
                   <Text style={styles.forecastTemp}>
                     {day.tempMin}° / {day.tempMax}°
                   </Text>
+                  <View style={styles.forecastDetail}>
+                    <Ionicons name="flag" size={12} color={colors.textMuted} />
+                    <Text style={styles.forecastDetailText}>{day.windGustsMax}</Text>
+                  </View>
+                  <View style={styles.forecastDetail}>
+                    <Ionicons name="rainy" size={12} color={colors.textMuted} />
+                    <Text style={styles.forecastDetailText}>{day.precipProbability}%</Text>
+                  </View>
                 </View>
               );
             })}
@@ -200,6 +221,15 @@ const createStyles = (colors: ReturnType<typeof useColors>, compact?: boolean, e
       ...typography.small,
       color: colors.textMuted,
     },
+    compactGusts: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+    compactGustsText: {
+      fontSize: 10,
+      color: colors.textMuted,
+    },
     content: {
       gap: spacing.md,
     },
@@ -226,27 +256,45 @@ const createStyles = (colors: ReturnType<typeof useColors>, compact?: boolean, e
       color: colors.textMuted,
       marginTop: spacing.xs,
     },
+    gusts: {
+      ...typography.caption,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
     forecast: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
       paddingTop: spacing.md,
       borderTopWidth: 1,
       borderTopColor: colors.border,
+      gap: spacing.sm,
     },
-    forecastDay: {
+    forecastRow: {
+      flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.xs,
-      padding: spacing.sm,
+      gap: spacing.sm,
+      paddingVertical: expanded ? spacing.sm : 2,
     },
     dayName: {
       ...typography.body,
       color: colors.textMuted,
       fontWeight: '600',
+      width: 36,
     },
     forecastTemp: {
       ...typography.caption,
       color: colors.textSecondary,
       fontWeight: '600',
+      flex: 1,
+    },
+    forecastDetail: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      minWidth: 44,
+    },
+    forecastDetailText: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontSize: 11,
     },
     errorText: {
       ...typography.caption,

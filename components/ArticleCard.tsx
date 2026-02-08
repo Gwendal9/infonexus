@@ -1,6 +1,5 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { AnimatedHeart } from '@/components/AnimatedHeart';
 import { ArticleWithSource } from '@/lib/queries/useArticles';

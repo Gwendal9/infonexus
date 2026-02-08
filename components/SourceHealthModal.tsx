@@ -11,15 +11,6 @@ interface SourceHealthModalProps {
   onClose: () => void;
 }
 
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const day = date.getDate();
-  const month = date.toLocaleDateString('fr-FR', { month: 'short' });
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${day} ${month} à ${hours}:${minutes}`;
-}
-
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -140,7 +131,7 @@ export function SourceHealthModal({ source, onClose }: SourceHealthModalProps) {
               <Ionicons name="time-outline" size={32} color={colors.textMuted} />
               <Text style={styles.emptyLogsText}>Aucun historique</Text>
               <Text style={styles.emptyLogsHint}>
-                Rafraîchissez les sources pour voir l'historique
+                Rafraîchissez les sources pour voir l{"'"}historique
               </Text>
             </View>
           )}

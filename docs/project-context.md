@@ -81,11 +81,22 @@ _Règles critiques que les agents AI doivent suivre. Focus sur les détails non-
 - Scraping : update `sources.status` et `sources.last_error`, pas de throw global
 - 3 retries avant marquage erreur
 
+### Topics (Sujets personnalisés)
+
+- **Pattern AsyncStorage** identique aux widgets : `TopicContext` + `useState` + `useEffect` load + `saveConfig`
+- Sujets filtrent par **contenu** (mots-clés sur titre/résumé) — différent des thèmes qui groupent des sources
+- Données : `lib/topics/types.ts` (Topic, TopicsConfig, GNewsSearchArticle)
+- Suggestions : `lib/topics/suggestions.ts` — 100 groupes × 5-10 mots-clés français
+- Hook `useTopicArticles(topicId)` — combine SQLite local (`LIKE` sur title/summary) + GNews `/search` API
+- Cache GNews 1h par sujet dans AsyncStorage, budget 80 req/jour (20 réservées widget Actu)
+- Articles GNews → `Linking.openURL()`, articles RSS → `router.push('/article/[id]')`
+
 ### Design System
 
 - **StyleSheet natif** — pas de librairie CSS-in-JS
-- Design tokens dans `theme/` : `colors.ts`, `spacing.ts`, `typography.ts`
+- Design tokens dans `theme/` : `colors.ts`, `spacing.ts`, `typography.ts`, `palette.ts`
 - Palette "Warm & Clear" : primary #FF6B35, background #FAFAFA
+- **24 couleurs partagées** dans `theme/palette.ts` — utilisées par thèmes et sujets
 - Espacement base 4px (xs=4, sm=8, md=16, lg=24, xl=32)
 
 ---

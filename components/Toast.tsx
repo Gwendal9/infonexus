@@ -1,12 +1,9 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  withDelay,
-  withSequence,
-  runOnJS,
   Easing,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,7 +54,7 @@ export function Toast({ visible, message, type = 'info', duration = 3000, onHide
 
       return () => clearTimeout(timer);
     }
-  }, [visible, duration]);
+  }, [visible, duration, onHide, opacity, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

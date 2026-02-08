@@ -1,12 +1,11 @@
 import { useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Source } from '@/types/database';
 import { SourceCard } from './SourceCard';
 import { useColors } from '@/contexts/ThemeContext';
-import { spacing } from '@/theme/spacing';
 
 interface SwipeableSourceCardProps {
   source: Source;

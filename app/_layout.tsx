@@ -10,6 +10,7 @@ import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext'
 import { NetworkProvider, useNetwork } from '@/contexts/NetworkContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { WidgetProvider } from '@/contexts/WidgetContext';
+import { TopicProvider } from '@/contexts/TopicContext';
 import { Onboarding } from '@/components/Onboarding';
 import { initializeDatabase } from '@/lib/db';
 import { processSyncQueue } from '@/lib/sync';
@@ -93,13 +94,15 @@ function AppProviders({ children }: { children: React.ReactNode }) {
       <NetworkProvider>
         <ToastProvider>
           <WidgetProvider>
-            <QueryProvider>
-              <AuthProvider>
-                <OnboardingProvider>
-                  {children}
-                </OnboardingProvider>
-              </AuthProvider>
-            </QueryProvider>
+            <TopicProvider>
+              <QueryProvider>
+                <AuthProvider>
+                  <OnboardingProvider>
+                    {children}
+                  </OnboardingProvider>
+                </AuthProvider>
+              </QueryProvider>
+            </TopicProvider>
           </WidgetProvider>
         </ToastProvider>
       </NetworkProvider>

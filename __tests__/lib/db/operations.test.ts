@@ -1,4 +1,4 @@
-import { Article, Source, Favorite } from '@/types/database';
+import { Article, Source } from '@/types/database';
 
 // Mock expo-sqlite
 const mockRunAsync = jest.fn();
@@ -16,7 +16,12 @@ jest.mock('expo-sqlite', () => ({
   }),
 }));
 
-// Import after mocking
+jest.mock('expo-crypto', () => ({
+  randomUUID: jest.fn(() => 'mock-uuid-1234'),
+}));
+
+// Import after mocking - must be after jest.mock calls
+// eslint-disable-next-line import/first
 import * as db from '@/lib/db/operations';
 
 describe('Database Operations', () => {
@@ -140,13 +145,6 @@ describe('Database Operations', () => {
   });
 
   describe('Favorites', () => {
-    const mockFavorite: Favorite = {
-      id: 'fav-1',
-      user_id: 'user-1',
-      article_id: 'article-1',
-      created_at: '2024-01-01T00:00:00Z',
-    };
-
     it('should get favorite article IDs', async () => {
       mockGetAllAsync.mockResolvedValueOnce([{ article_id: 'article-1' }, { article_id: 'article-2' }]);
 

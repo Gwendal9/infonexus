@@ -5,7 +5,12 @@ import {
   WidgetType,
   WeatherSettings,
   CryptoSettings,
+  FootballSettings,
+  StockSettings,
+  NewsSettings,
   DEFAULT_WIDGET_CONFIG,
+  PRESET_STOCKS,
+  PRESET_ETFS,
 } from '@/lib/widgets/types';
 
 const STORAGE_KEY = 'widget_config';
@@ -19,6 +24,12 @@ interface WidgetContextType {
   updateWeatherSettings: (settings: Partial<WeatherSettings>) => void;
   // Update crypto settings
   updateCryptoSettings: (settings: Partial<CryptoSettings>) => void;
+  // Update football settings
+  updateFootballSettings: (settings: Partial<FootballSettings>) => void;
+  // Update stock settings
+  updateStockSettings: (settings: Partial<StockSettings>) => void;
+  // Update news settings
+  updateNewsSettings: (settings: Partial<NewsSettings>) => void;
   // Reset to defaults
   resetConfig: () => void;
 }
@@ -49,6 +60,15 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
             ...parsed.settings,
             weather: { ...DEFAULT_WIDGET_CONFIG.settings.weather, ...parsed.settings?.weather },
             crypto: { ...DEFAULT_WIDGET_CONFIG.settings.crypto, ...parsed.settings?.crypto },
+            football: { ...DEFAULT_WIDGET_CONFIG.settings.football, ...parsed.settings?.football },
+            stock: (() => {
+              const merged = { ...DEFAULT_WIDGET_CONFIG.settings.stock, ...parsed.settings?.stock };
+              // Filter out stock symbols that no longer exist in presets
+              const validSymbols = new Set([...PRESET_STOCKS, ...PRESET_ETFS].map(s => s.symbol));
+              const filteredItems = (merged.items ?? []).filter((item: any) => validSymbols.has(item.symbol));
+              return { ...merged, items: filteredItems.length > 0 ? filteredItems : DEFAULT_WIDGET_CONFIG.settings.stock.items };
+            })(),
+            news: { ...DEFAULT_WIDGET_CONFIG.settings.news, ...parsed.settings?.news },
           },
         });
       }
@@ -115,6 +135,57 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateFootballSettings = useCallback((settings: Partial<FootballSettings>) => {
+    setConfig((prev) => {
+      const newConfig = {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          football: {
+            ...prev.settings.football,
+            ...settings,
+          },
+        },
+      };
+      saveConfig(newConfig);
+      return newConfig;
+    });
+  }, []);
+
+  const updateStockSettings = useCallback((settings: Partial<StockSettings>) => {
+    setConfig((prev) => {
+      const newConfig = {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          stock: {
+            ...prev.settings.stock,
+            ...settings,
+          },
+        },
+      };
+      saveConfig(newConfig);
+      return newConfig;
+    });
+  }, []);
+
+  const updateNewsSettings = useCallback((settings: Partial<NewsSettings>) => {
+    setConfig((prev) => {
+      const newConfig = {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          news: {
+            ...prev.settings.news,
+            ...settings,
+          },
+        },
+      };
+      saveConfig(newConfig);
+      return newConfig;
+    });
+  }, []);
+
   const resetConfig = useCallback(() => {
     setConfig(DEFAULT_WIDGET_CONFIG);
     saveConfig(DEFAULT_WIDGET_CONFIG);
@@ -128,6 +199,9 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
         toggleWidget,
         updateWeatherSettings,
         updateCryptoSettings,
+        updateFootballSettings,
+        updateStockSettings,
+        updateNewsSettings,
         resetConfig,
       }}
     >

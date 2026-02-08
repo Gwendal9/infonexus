@@ -1,0 +1,100 @@
+// French word of the day list with embedded definitions as fallback
+// Words chosen to be interesting AND have a useful definition
+
+export interface WordEntry {
+  word: string;
+  partOfSpeech: string;
+  definition: string;
+}
+
+export const FRENCH_WORDS: WordEntry[] = [
+  { word: 'éphémère', partOfSpeech: 'adjectif', definition: 'Qui ne dure qu\'un jour, qui est de courte durée.' },
+  { word: 'mélancolie', partOfSpeech: 'nom', definition: 'Tristesse vague et douce, sentiment de langueur rêveuse.' },
+  { word: 'résilience', partOfSpeech: 'nom', definition: 'Capacité à surmonter les épreuves et à rebondir.' },
+  { word: 'nostalgie', partOfSpeech: 'nom', definition: 'Regret attendri d\'un passé révolu ou d\'un bonheur perdu.' },
+  { word: 'euphorie', partOfSpeech: 'nom', definition: 'Sentiment intense de bien-être et de joie.' },
+  { word: 'nonchalance', partOfSpeech: 'nom', definition: 'Attitude désinvolte, manque d\'empressement naturel.' },
+  { word: 'audace', partOfSpeech: 'nom', definition: 'Hardiesse qui pousse à oser sans craindre les obstacles.' },
+  { word: 'panache', partOfSpeech: 'nom', definition: 'Allure brillante, bravoure démonstrative et élégante.' },
+  { word: 'verve', partOfSpeech: 'nom', definition: 'Qualité d\'esprit vif et brillant dans l\'expression.' },
+  { word: 'fougue', partOfSpeech: 'nom', definition: 'Ardeur impétueuse, élan passionné et enthousiaste.' },
+  { word: 'éloquence', partOfSpeech: 'nom', definition: 'Art de bien parler, de convaincre par la parole.' },
+  { word: 'bienveillance', partOfSpeech: 'nom', definition: 'Disposition favorable envers autrui, bonté indulgente.' },
+  { word: 'abnégation', partOfSpeech: 'nom', definition: 'Sacrifice volontaire de soi-même au profit d\'autrui.' },
+  { word: 'contemplation', partOfSpeech: 'nom', definition: 'Action de s\'absorber dans l\'observation attentive.' },
+  { word: 'effervescence', partOfSpeech: 'nom', definition: 'Agitation vive, bouillonnement d\'enthousiasme.' },
+  { word: 'gratitude', partOfSpeech: 'nom', definition: 'Reconnaissance envers quelqu\'un pour un bienfait reçu.' },
+  { word: 'chimère', partOfSpeech: 'nom', definition: 'Rêve irréalisable, illusion créée par l\'imagination.' },
+  { word: 'utopie', partOfSpeech: 'nom', definition: 'Idéal social ou politique qui ne tient pas compte de la réalité.' },
+  { word: 'symbiose', partOfSpeech: 'nom', definition: 'Association étroite et mutuellement bénéfique.' },
+  { word: 'métamorphose', partOfSpeech: 'nom', definition: 'Transformation profonde d\'un être ou d\'une chose.' },
+  { word: 'harmonie', partOfSpeech: 'nom', definition: 'Accord agréable entre les parties d\'un ensemble.' },
+  { word: 'cacophonie', partOfSpeech: 'nom', definition: 'Mélange discordant de sons désagréables.' },
+  { word: 'patrimoine', partOfSpeech: 'nom', definition: 'Ensemble des biens hérités ou à transmettre.' },
+  { word: 'paradigme', partOfSpeech: 'nom', definition: 'Modèle de pensée qui structure une vision du monde.' },
+  { word: 'altruisme', partOfSpeech: 'nom', definition: 'Souci désintéressé du bien d\'autrui.' },
+  { word: 'pragmatisme', partOfSpeech: 'nom', definition: 'Attitude qui privilégie l\'action pratique et les résultats.' },
+  { word: 'crépuscule', partOfSpeech: 'nom', definition: 'Lumière diffuse qui suit le coucher du soleil.' },
+  { word: 'pénombre', partOfSpeech: 'nom', definition: 'Lumière faible, demi-jour entre ombre et clarté.' },
+  { word: 'paradoxe', partOfSpeech: 'nom', definition: 'Affirmation contraire à l\'opinion commune mais qui porte une vérité.' },
+  { word: 'mystère', partOfSpeech: 'nom', definition: 'Ce qui est inexpliqué, secret ou incompréhensible.' },
+  { word: 'aventure', partOfSpeech: 'nom', definition: 'Expérience extraordinaire comportant une part d\'inconnu.' },
+  { word: 'courage', partOfSpeech: 'nom', definition: 'Force morale qui permet d\'affronter le danger ou la difficulté.' },
+  { word: 'sagesse', partOfSpeech: 'nom', definition: 'Qualité de celui qui fait preuve de jugement et de modération.' },
+  { word: 'liberté', partOfSpeech: 'nom', definition: 'Pouvoir d\'agir selon sa volonté, absence de contrainte.' },
+  { word: 'passion', partOfSpeech: 'nom', definition: 'Sentiment intense qui domine la raison et la volonté.' },
+  { word: 'silence', partOfSpeech: 'nom', definition: 'Absence de bruit, calme propice à la réflexion.' },
+  { word: 'lumière', partOfSpeech: 'nom', definition: 'Ce qui éclaire, rend visible ; au figuré, connaissance.' },
+  { word: 'horizon', partOfSpeech: 'nom', definition: 'Ligne où le ciel et la terre semblent se rejoindre.' },
+  { word: 'destin', partOfSpeech: 'nom', definition: 'Cours de l\'existence considéré comme fixé d\'avance.' },
+  { word: 'souvenir', partOfSpeech: 'nom', definition: 'Image du passé qui revient à la mémoire.' },
+  { word: 'promesse', partOfSpeech: 'nom', definition: 'Engagement à faire ou à donner quelque chose.' },
+  { word: 'étoile', partOfSpeech: 'nom', definition: 'Astre lumineux visible dans le ciel nocturne.' },
+  { word: 'voyage', partOfSpeech: 'nom', definition: 'Déplacement vers un lieu éloigné, périple.' },
+  { word: 'tempête', partOfSpeech: 'nom', definition: 'Perturbation atmosphérique violente avec vents forts.' },
+  { word: 'aurore', partOfSpeech: 'nom', definition: 'Lueur brillante qui précède le lever du soleil.' },
+  { word: 'solitude', partOfSpeech: 'nom', definition: 'État d\'une personne seule, isolement choisi ou subi.' },
+  { word: 'douceur', partOfSpeech: 'nom', definition: 'Qualité de ce qui est agréable au toucher ou au caractère.' },
+  { word: 'tendresse', partOfSpeech: 'nom', definition: 'Sentiment d\'affection douce et délicate.' },
+  { word: 'espoir', partOfSpeech: 'nom', definition: 'Attente confiante de la réalisation d\'un souhait.' },
+  { word: 'murmure', partOfSpeech: 'nom', definition: 'Bruit léger et continu de voix basses ou d\'eau.' },
+  { word: 'frisson', partOfSpeech: 'nom', definition: 'Tremblement léger causé par le froid ou l\'émotion.' },
+  { word: 'éclat', partOfSpeech: 'nom', definition: 'Lumière vive et brillante ; caractère remarquable.' },
+  { word: 'refuge', partOfSpeech: 'nom', definition: 'Lieu où l\'on se met à l\'abri du danger.' },
+  { word: 'ivresse', partOfSpeech: 'nom', definition: 'Exaltation intense, état d\'enthousiasme extrême.' },
+  { word: 'vertige', partOfSpeech: 'nom', definition: 'Sensation de perte d\'équilibre, étourdissement.' },
+  { word: 'prestige', partOfSpeech: 'nom', definition: 'Attrait particulier qui suscite l\'admiration.' },
+  { word: 'prodige', partOfSpeech: 'nom', definition: 'Événement extraordinaire, personne d\'un talent exceptionnel.' },
+  { word: 'héritage', partOfSpeech: 'nom', definition: 'Ce qui est transmis par les générations précédentes.' },
+  { word: 'énigme', partOfSpeech: 'nom', definition: 'Chose difficile à comprendre ou à expliquer.' },
+  { word: 'miracle', partOfSpeech: 'nom', definition: 'Fait extraordinaire qui semble défier les lois naturelles.' },
+  { word: 'splendeur', partOfSpeech: 'nom', definition: 'Éclat magnifique, beauté grandiose.' },
+  { word: 'merveille', partOfSpeech: 'nom', definition: 'Chose qui provoque l\'admiration par sa beauté.' },
+  { word: 'légende', partOfSpeech: 'nom', definition: 'Récit populaire mêlant faits réels et imagination.' },
+  { word: 'alchimie', partOfSpeech: 'nom', definition: 'Combinaison mystérieuse qui produit un résultat inattendu.' },
+  { word: 'féerie', partOfSpeech: 'nom', definition: 'Spectacle enchanteur, atmosphère magique.' },
+  { word: 'prouesse', partOfSpeech: 'nom', definition: 'Action remarquable demandant habileté ou courage.' },
+  { word: 'bravoure', partOfSpeech: 'nom', definition: 'Courage éclatant face au danger.' },
+  { word: 'élégance', partOfSpeech: 'nom', definition: 'Qualité de ce qui est raffiné et harmonieux.' },
+  { word: 'grâce', partOfSpeech: 'nom', definition: 'Charme naturel dans les mouvements ou l\'attitude.' },
+  { word: 'finesse', partOfSpeech: 'nom', definition: 'Qualité de ce qui est subtil et délicat.' },
+  { word: 'nuance', partOfSpeech: 'nom', definition: 'Différence légère et subtile entre deux choses proches.' },
+  { word: 'essence', partOfSpeech: 'nom', definition: 'Ce qui constitue la nature profonde d\'une chose.' },
+  { word: 'sérénité', partOfSpeech: 'nom', definition: 'État de calme profond et de tranquillité intérieure.' },
+  { word: 'plénitude', partOfSpeech: 'nom', definition: 'État de ce qui est complet, sentiment de satisfaction totale.' },
+  { word: 'volupté', partOfSpeech: 'nom', definition: 'Plaisir intense des sens ou de l\'esprit.' },
+  { word: 'béatitude', partOfSpeech: 'nom', definition: 'Bonheur parfait, état de félicité suprême.' },
+  { word: 'félicité', partOfSpeech: 'nom', definition: 'Bonheur intense et durable.' },
+  { word: 'émerveillement', partOfSpeech: 'nom', definition: 'Sentiment d\'admiration mêlé de surprise.' },
+  { word: 'quintessence', partOfSpeech: 'nom', definition: 'Ce qu\'il y a de plus pur, de plus raffiné dans quelque chose.' },
+  { word: 'osmose', partOfSpeech: 'nom', definition: 'Influence réciproque, interpénétration progressive.' },
+  { word: 'épiphanie', partOfSpeech: 'nom', definition: 'Révélation soudaine, prise de conscience illuminante.' },
+];
+
+export function getWordOfDay(): WordEntry {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const diff = now.getTime() - start.getTime();
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  return FRENCH_WORDS[dayOfYear % FRENCH_WORDS.length];
+}

@@ -59,6 +59,7 @@ const createStyles = (colors: ReturnType<typeof useColors>, compact: boolean, ex
       borderRadius: expanded ? 20 : 16,
       padding: compact ? spacing.sm : expanded ? spacing.lg : spacing.md,
       height: compact ? '100%' : undefined,
+      flex: expanded ? 1 : undefined,
       ...(expanded ? {} : {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -80,6 +81,6 @@ const createStyles = (colors: ReturnType<typeof useColors>, compact: boolean, ex
       letterSpacing: expanded ? 0 : 0.5,
     },
     content: {
-      flex: compact ? 1 : undefined,
+      flex: (compact || expanded) ? 1 : undefined,
     },
   });

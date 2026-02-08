@@ -5,12 +5,16 @@ import * as Haptics from 'expo-haptics';
 import { WeatherWidget } from './WeatherWidget';
 import { QuoteWidget } from './QuoteWidget';
 import { FinanceWidget } from './FinanceWidget';
+import { FootballWidget } from './FootballWidget';
+import { StockWidget } from './StockWidget';
+import { NewsWidget } from './NewsWidget';
+import { WordWidget } from './WordWidget';
 import { useWidgetConfig } from '@/contexts/WidgetContext';
 import { useColors } from '@/contexts/ThemeContext';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-type DetailType = 'weather' | 'crypto' | 'quote' | null;
+type DetailType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | null;
 
 export function WidgetsRow() {
   const colors = useColors();
@@ -22,7 +26,8 @@ export function WidgetsRow() {
   }
 
   const hasEnabledWidgets =
-    config.enabled.weather || config.enabled.crypto || config.enabled.quote;
+    config.enabled.weather || config.enabled.crypto || config.enabled.quote ||
+    config.enabled.football || config.enabled.stock || config.enabled.news || config.enabled.word;
 
   if (!hasEnabledWidgets) {
     return null;
@@ -33,6 +38,19 @@ export function WidgetsRow() {
   const handleWidgetPress = (type: DetailType) => {
     Haptics.selectionAsync();
     setDetailModal(type);
+  };
+
+  const getModalTitle = (type: DetailType): string => {
+    switch (type) {
+      case 'weather': return 'Météo';
+      case 'crypto': return 'Crypto';
+      case 'quote': return 'Citation du jour';
+      case 'football': return 'Football';
+      case 'stock': return 'Bourse';
+      case 'news': return 'Actu';
+      case 'word': return 'Mot du jour';
+      default: return '';
+    }
   };
 
   return (
@@ -69,6 +87,42 @@ export function WidgetsRow() {
             <QuoteWidget compact />
           </TouchableOpacity>
         )}
+        {config.enabled.football && (
+          <TouchableOpacity
+            style={styles.widget}
+            onPress={() => handleWidgetPress('football')}
+            activeOpacity={0.8}
+          >
+            <FootballWidget compact />
+          </TouchableOpacity>
+        )}
+        {config.enabled.stock && (
+          <TouchableOpacity
+            style={styles.widget}
+            onPress={() => handleWidgetPress('stock')}
+            activeOpacity={0.8}
+          >
+            <StockWidget compact />
+          </TouchableOpacity>
+        )}
+        {config.enabled.news && (
+          <TouchableOpacity
+            style={styles.widget}
+            onPress={() => handleWidgetPress('news')}
+            activeOpacity={0.8}
+          >
+            <NewsWidget compact />
+          </TouchableOpacity>
+        )}
+        {config.enabled.word && (
+          <TouchableOpacity
+            style={styles.widget}
+            onPress={() => handleWidgetPress('word')}
+            activeOpacity={0.8}
+          >
+            <WordWidget compact />
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* Detail Modal */}
@@ -81,19 +135,21 @@ export function WidgetsRow() {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {detailModal === 'weather' && 'Météo'}
-              {detailModal === 'crypto' && 'Crypto'}
-              {detailModal === 'quote' && 'Citation du jour'}
+              {getModalTitle(detailModal)}
             </Text>
             <TouchableOpacity onPress={() => setDetailModal(null)} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
-          <View style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             {detailModal === 'weather' && <WeatherWidget expanded />}
             {detailModal === 'crypto' && <FinanceWidget expanded />}
             {detailModal === 'quote' && <QuoteWidget expanded />}
-          </View>
+            {detailModal === 'football' && <FootballWidget expanded />}
+            {detailModal === 'stock' && <StockWidget expanded />}
+            {detailModal === 'news' && <NewsWidget expanded />}
+            {detailModal === 'word' && <WordWidget expanded />}
+          </ScrollView>
         </View>
       </Modal>
     </>

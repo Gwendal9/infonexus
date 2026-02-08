@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Image,
   Linking,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -56,14 +55,6 @@ export default function ArticleDetailScreen() {
 
   const handleToggleFavorite = () => {
     toggleFavorite.mutate({ articleId: id, isFavorite });
-  };
-
-  const handleShare = async () => {
-    if (article?.url) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // For now just open the URL, could add Share API later
-      Linking.openURL(article.url);
-    }
   };
 
   if (isLoading || !article) {
@@ -132,7 +123,7 @@ export default function ArticleDetailScreen() {
           <Animated.View entering={FadeInUp.delay(400)}>
             <TouchableOpacity style={styles.readButton} onPress={handleOpenOriginal}>
               <Ionicons name="open-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.readButtonText}>Lire l'article complet</Text>
+              <Text style={styles.readButtonText}>Lire l{"'"}article complet</Text>
             </TouchableOpacity>
           </Animated.View>
 

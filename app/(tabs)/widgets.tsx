@@ -15,6 +15,10 @@ import { useWidgetConfig } from '@/contexts/WidgetContext';
 import { WeatherWidget } from '@/components/widgets/WeatherWidget';
 import { FinanceWidget } from '@/components/widgets/FinanceWidget';
 import { QuoteWidget } from '@/components/widgets/QuoteWidget';
+import { FootballWidget } from '@/components/widgets/FootballWidget';
+import { StockWidget } from '@/components/widgets/StockWidget';
+import { NewsWidget } from '@/components/widgets/NewsWidget';
+import { WordWidget } from '@/components/widgets/WordWidget';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
@@ -23,7 +27,7 @@ const GRID_PADDING = spacing.md;
 const GRID_GAP = spacing.sm;
 const WIDGET_SIZE = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
 
-type DetailType = 'weather' | 'crypto' | 'quote' | 'football' | null;
+type DetailType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | null;
 
 export default function WidgetsScreen() {
   const colors = useColors();
@@ -45,7 +49,21 @@ export default function WidgetsScreen() {
     );
   }
 
-  const hasAnyWidget = config.enabled.weather || config.enabled.crypto || config.enabled.quote;
+  const hasAnyWidget = config.enabled.weather || config.enabled.crypto || config.enabled.quote ||
+    config.enabled.football || config.enabled.stock || config.enabled.news || config.enabled.word;
+
+  const getModalTitle = (type: DetailType): string => {
+    switch (type) {
+      case 'weather': return 'Météo';
+      case 'crypto': return 'Crypto';
+      case 'quote': return 'Citation du jour';
+      case 'football': return 'Football';
+      case 'stock': return 'Bourse';
+      case 'news': return 'Actu';
+      case 'word': return 'Mot du jour';
+      default: return '';
+    }
+  };
 
   return (
     <>
@@ -87,17 +105,42 @@ export default function WidgetsScreen() {
                 <QuoteWidget compact />
               </TouchableOpacity>
             )}
-            {/* Football widget - Coming soon placeholder */}
-            <TouchableOpacity
-              style={[styles.widgetTile, styles.comingSoon]}
-              activeOpacity={1}
-            >
-              <View style={styles.comingSoonContent}>
-                <Ionicons name="football" size={32} color={colors.textMuted} />
-                <Text style={styles.comingSoonText}>Football</Text>
-                <Text style={styles.comingSoonBadge}>Bientôt</Text>
-              </View>
-            </TouchableOpacity>
+            {config.enabled.football && (
+              <TouchableOpacity
+                style={styles.widgetTile}
+                onPress={() => handleWidgetPress('football')}
+                activeOpacity={0.8}
+              >
+                <FootballWidget compact />
+              </TouchableOpacity>
+            )}
+            {config.enabled.stock && (
+              <TouchableOpacity
+                style={styles.widgetTile}
+                onPress={() => handleWidgetPress('stock')}
+                activeOpacity={0.8}
+              >
+                <StockWidget compact />
+              </TouchableOpacity>
+            )}
+            {config.enabled.news && (
+              <TouchableOpacity
+                style={styles.widgetTile}
+                onPress={() => handleWidgetPress('news')}
+                activeOpacity={0.8}
+              >
+                <NewsWidget compact />
+              </TouchableOpacity>
+            )}
+            {config.enabled.word && (
+              <TouchableOpacity
+                style={styles.widgetTile}
+                onPress={() => handleWidgetPress('word')}
+                activeOpacity={0.8}
+              >
+                <WordWidget compact />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -112,20 +155,21 @@ export default function WidgetsScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {detailModal === 'weather' && 'Météo'}
-              {detailModal === 'crypto' && 'Crypto'}
-              {detailModal === 'quote' && 'Citation du jour'}
-              {detailModal === 'football' && 'Football'}
+              {getModalTitle(detailModal)}
             </Text>
             <TouchableOpacity onPress={() => setDetailModal(null)} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
-          <View style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             {detailModal === 'weather' && <WeatherWidget expanded />}
             {detailModal === 'crypto' && <FinanceWidget expanded />}
             {detailModal === 'quote' && <QuoteWidget expanded />}
-          </View>
+            {detailModal === 'football' && <FootballWidget expanded />}
+            {detailModal === 'stock' && <StockWidget expanded />}
+            {detailModal === 'news' && <NewsWidget expanded />}
+            {detailModal === 'word' && <WordWidget expanded />}
+          </ScrollView>
         </View>
       </Modal>
     </>
@@ -148,29 +192,6 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       width: WIDGET_SIZE,
       height: WIDGET_SIZE,
       borderRadius: 16,
-      overflow: 'hidden',
-    },
-    comingSoon: {
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    comingSoonContent: {
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    comingSoonText: {
-      ...typography.body,
-      color: colors.textMuted,
-      fontWeight: '600',
-    },
-    comingSoonBadge: {
-      ...typography.small,
-      color: colors.primary,
-      backgroundColor: colors.primary + '20',
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 2,
-      borderRadius: 8,
       overflow: 'hidden',
     },
     emptyState: {

@@ -291,6 +291,8 @@ supabase/functions/
 | **Server state** | React Query (`useQuery`, `useMutation`) |
 | **UI state local** | `useState` |
 | **UI state global** | React Context (thème actif, filtres) |
+| **User prefs (widgets)** | `WidgetContext` + AsyncStorage |
+| **User prefs (topics)** | `TopicContext` + AsyncStorage |
 
 **Pas de Zustand/Redux** — complexité non justifiée pour ce projet.
 
@@ -524,6 +526,7 @@ infonexus/
 │   ├── supabase.ts                   # Client Supabase initialisé
 │   ├── queries/                      # React Query hooks
 │   │   ├── useArticles.ts
+│   │   ├── useTopicArticles.ts       # Articles filtrés par sujet (SQLite + GNews)
 │   │   ├── useSources.ts
 │   │   ├── useThemes.ts
 │   │   ├── useFavorites.ts
@@ -534,6 +537,10 @@ infonexus/
 │   │   ├── useRefreshSources.ts
 │   │   ├── useToggleFavorite.ts
 │   │   └── index.ts
+│   ├── topics/                       # Sujets personnalisés
+│   │   ├── types.ts                  # Topic, TopicsConfig, GNewsSearchArticle
+│   │   └── suggestions.ts           # 100 groupes de mots-clés français
+│   ├── widgets/                      # Widgets (types, presets, data)
 │   ├── validators/                   # Schémas Zod
 │   │   ├── source.ts
 │   │   ├── theme.ts
@@ -546,6 +553,7 @@ infonexus/
 │   ├── colors.ts
 │   ├── spacing.ts
 │   ├── typography.ts
+│   ├── palette.ts                    # 24 couleurs partagées (thèmes + sujets)
 │   ├── shadows.ts
 │   └── index.ts
 │
@@ -554,7 +562,13 @@ infonexus/
 │   ├── navigation.ts                 # Types routes
 │   └── index.ts
 │
-├── providers/                        # React Context providers
+├── contexts/                         # React Context providers
+│   ├── TopicContext.tsx               # Sujets + cache GNews + budget API
+│   ├── WidgetContext.tsx              # Configuration widgets
+│   ├── NetworkContext.tsx             # État réseau online/offline
+│   ├── ThemeContext.tsx               # Thème sombre/clair
+│   └── ToastContext.tsx               # Notifications toast
+├── providers/                        # React providers (auth, query)
 │   ├── AuthProvider.tsx
 │   ├── QueryProvider.tsx
 │   └── index.ts

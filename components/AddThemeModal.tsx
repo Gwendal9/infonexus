@@ -13,6 +13,7 @@ import { Input } from '@/components/Input';
 import { useColors } from '@/contexts/ThemeContext';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
+import { COLOR_PALETTE } from '@/theme/palette';
 
 interface AddThemeModalProps {
   visible: boolean;
@@ -22,23 +23,12 @@ interface AddThemeModalProps {
   error?: string;
 }
 
-const THEME_COLORS = [
-  '#FF6B35', // Orange (primary)
-  '#4CAF50', // Green
-  '#2196F3', // Blue
-  '#9C27B0', // Purple
-  '#F44336', // Red
-  '#FF9800', // Amber
-  '#00BCD4', // Cyan
-  '#E91E63', // Pink
-];
-
 export function AddThemeModal({ visible, onClose, onAdd, loading, error }: AddThemeModalProps) {
   const colors = useColors();
   const styles = createStyles(colors);
 
   const [name, setName] = useState('');
-  const [selectedColor, setSelectedColor] = useState(THEME_COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState(COLOR_PALETTE[0]);
   const [validationError, setValidationError] = useState('');
 
   const handleAdd = () => {
@@ -54,7 +44,7 @@ export function AddThemeModal({ visible, onClose, onAdd, loading, error }: AddTh
 
   const handleClose = () => {
     setName('');
-    setSelectedColor(THEME_COLORS[0]);
+    setSelectedColor(COLOR_PALETTE[0]);
     setValidationError('');
     onClose();
   };
@@ -87,7 +77,7 @@ export function AddThemeModal({ visible, onClose, onAdd, loading, error }: AddTh
 
               <Text style={styles.colorLabel}>Couleur</Text>
               <View style={styles.colorGrid}>
-                {THEME_COLORS.map((color) => (
+                {COLOR_PALETTE.map((color) => (
                   <TouchableOpacity
                     key={color}
                     style={[
