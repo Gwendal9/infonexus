@@ -15,7 +15,10 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      "expo-background-fetch",
+      "expo-task-manager",
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -33,7 +36,12 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "fetch"
+        ]
+      }
     },
     "android": {
       "package": "com.infonexus.app",

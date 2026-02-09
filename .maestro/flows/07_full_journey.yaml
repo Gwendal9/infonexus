@@ -1,0 +1,8 @@
+appId: com.infonexus.app
+---
+- runFlow: 01_login.yaml
+- runFlow: 02_onboarding.yaml
+- runFlow: 04_view_feed.yaml
+- runFlow: 05_read_article.yaml
+- runFlow: 06_favorite.yaml
+- runFlow: 03_navigate_sources.yaml

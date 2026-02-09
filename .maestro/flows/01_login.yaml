@@ -1,0 +1,12 @@
+appId: com.infonexus.app
+---
+- launchApp
+- assertVisible: "Connexion"
+- tapOn:
+    id: "email-input"
+- inputText: "${EMAIL}"
+- tapOn:
+    id: "password-input"
+- inputText: "${PASSWORD}"
+- tapOn: "Se connecter"
+- waitForAnimationToEnd

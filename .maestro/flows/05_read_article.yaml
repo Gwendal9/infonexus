@@ -1,0 +1,12 @@
+appId: com.infonexus.app
+---
+# Tap first article card in feed
+- tapOn:
+    id: "article-card"
+    index: 0
+- waitForAnimationToEnd
+# Verify article detail screen
+- assertVisible: "Lire ici"
+- assertVisible: "Ouvrir dans le navigateur"
+# Go back
+- back

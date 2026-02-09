@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  ActivityIndicator,
   Image,
   Linking,
   ScrollView,
@@ -12,13 +14,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AnimatedHeart } from '@/components/AnimatedHeart';
+import { ReaderView } from '@/components/ReaderView';
 import { useArticleById } from '@/lib/queries/useArticles';
 import { useFavoriteIds } from '@/lib/queries/useFavorites';
 import { useToggleFavorite } from '@/lib/mutations/useFavoriteMutations';
+import { extractArticleContent, ArticleContent } from '@/lib/services/articleReader';
 import { useColors } from '@/contexts/ThemeContext';
+import { useToast } from '@/contexts/ToastContext';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
+
+const FONT_SIZE_KEY = '@infonexus_reader_font_size';
+const DEFAULT_FONT_SIZE = 17;
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return '';
@@ -37,6 +46,7 @@ export default function ArticleDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = createStyles(colors, insets.top);
+  const { showError } = useToast();
 
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -45,6 +55,48 @@ export default function ArticleDetailScreen() {
   const toggleFavorite = useToggleFavorite();
 
   const isFavorite = favoriteIds?.has(id) ?? false;
+
+  // Reader mode state
+  const [readerMode, setReaderMode] = useState(false);
+  const [articleContent, setArticleContent] = useState<ArticleContent | null>(null);
+  const [loadingContent, setLoadingContent] = useState(false);
+  const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
+
+  // Load saved font size
+  useEffect(() => {
+    AsyncStorage.getItem(FONT_SIZE_KEY).then((value) => {
+      if (value) setFontSize(parseInt(value, 10));
+    });
+  }, []);
+
+  const handleFontSizeChange = (size: number) => {
+    setFontSize(size);
+    AsyncStorage.setItem(FONT_SIZE_KEY, String(size));
+  };
+
+  const handleReadInApp = async () => {
+    if (articleContent) {
+      setReaderMode(true);
+      return;
+    }
+
+    if (!article?.url) return;
+
+    setLoadingContent(true);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const content = await extractArticleContent(article.url);
+
+    if (content) {
+      setArticleContent(content);
+      setReaderMode(true);
+    } else {
+      showError("Impossible d'extraire le contenu. Ouverture dans le navigateur...");
+      Linking.openURL(article.url);
+    }
+
+    setLoadingContent(false);
+  };
 
   const handleOpenOriginal = async () => {
     if (article?.url) {
@@ -55,6 +107,15 @@ export default function ArticleDetailScreen() {
 
   const handleToggleFavorite = () => {
     toggleFavorite.mutate({ articleId: id, isFavorite });
+  };
+
+  const handleToggleReaderMode = () => {
+    Haptics.selectionAsync();
+    if (readerMode) {
+      setReaderMode(false);
+    } else {
+      handleReadInApp();
+    }
   };
 
   if (isLoading || !article) {
@@ -69,10 +130,17 @@ export default function ArticleDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity testID="back-button" onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={handleToggleReaderMode} style={styles.headerButton}>
+            <Ionicons
+              name={readerMode ? 'document-text' : 'reader-outline'}
+              size={22}
+              color={readerMode ? colors.primary : colors.textPrimary}
+            />
+          </TouchableOpacity>
           <AnimatedHeart
             isFavorite={isFavorite}
             onPress={handleToggleFavorite}
@@ -84,7 +152,7 @@ export default function ArticleDetailScreen() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Image */}
-        {article.image_url && (
+        {article.image_url && !readerMode && (
           <Animated.View entering={FadeIn.duration(300)}>
             <Image source={{ uri: article.image_url }} style={styles.image} resizeMode="cover" />
           </Animated.View>
@@ -112,25 +180,53 @@ export default function ArticleDetailScreen() {
             </Animated.Text>
           )}
 
-          {/* Summary */}
-          {article.summary && (
-            <Animated.Text entering={FadeInUp.delay(300)} style={styles.summary}>
-              {article.summary}
-            </Animated.Text>
+          {readerMode && articleContent ? (
+            /* Reader mode content */
+            <Animated.View entering={FadeIn.duration(300)}>
+              <ReaderView
+                content={articleContent}
+                fontSize={fontSize}
+                onFontSizeChange={handleFontSizeChange}
+              />
+            </Animated.View>
+          ) : (
+            <>
+              {/* Summary */}
+              {article.summary && (
+                <Animated.Text entering={FadeInUp.delay(300)} style={styles.summary}>
+                  {article.summary}
+                </Animated.Text>
+              )}
+
+              {/* Action buttons */}
+              <Animated.View entering={FadeInUp.delay(400)} style={styles.buttonGroup}>
+                {/* Read in-app button */}
+                <TouchableOpacity
+                  style={styles.readInAppButton}
+                  onPress={handleReadInApp}
+                  disabled={loadingContent}
+                >
+                  {loadingContent ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Ionicons name="reader-outline" size={20} color={colors.primary} />
+                  )}
+                  <Text style={styles.readInAppText}>Lire ici</Text>
+                </TouchableOpacity>
+
+                {/* Open in browser button */}
+                <TouchableOpacity style={styles.readButton} onPress={handleOpenOriginal}>
+                  <Ionicons name="open-outline" size={20} color="#FFFFFF" />
+                  <Text style={styles.readButtonText}>Ouvrir dans le navigateur</Text>
+                </TouchableOpacity>
+              </Animated.View>
+
+              {/* URL Preview */}
+              <Animated.Text entering={FadeInUp.delay(450)} style={styles.urlPreview} numberOfLines={1}>
+                {article.url}
+              </Animated.Text>
+            </>
           )}
-
-          {/* Read Original Button */}
-          <Animated.View entering={FadeInUp.delay(400)}>
-            <TouchableOpacity style={styles.readButton} onPress={handleOpenOriginal}>
-              <Ionicons name="open-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.readButtonText}>Lire l{"'"}article complet</Text>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* URL Preview */}
-          <Animated.Text entering={FadeInUp.delay(450)} style={styles.urlPreview} numberOfLines={1}>
-            {article.url}
-          </Animated.Text>
         </View>
       </ScrollView>
     </View>
@@ -226,6 +322,26 @@ const createStyles = (colors: ReturnType<typeof useColors>, topInset: number) =>
       lineHeight: 26,
       marginBottom: spacing.xl,
     },
+    buttonGroup: {
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    readInAppButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+      borderRadius: 12,
+    },
+    readInAppText: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: '600',
+    },
     readButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -235,7 +351,6 @@ const createStyles = (colors: ReturnType<typeof useColors>, topInset: number) =>
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.xl,
       borderRadius: 12,
-      marginBottom: spacing.md,
     },
     readButtonText: {
       ...typography.body,

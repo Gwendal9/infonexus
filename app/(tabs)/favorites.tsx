@@ -6,7 +6,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArticleCard } from '@/components/ArticleCard';
+import { SwipeableArticleCard } from '@/components/SwipeableArticleCard';
 import { ArticleCardSkeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { useFavorites } from '@/lib/queries/useFavorites';
@@ -58,11 +58,12 @@ export default function FavoritesScreen() {
         data={favorites}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <ArticleCard
+          <SwipeableArticleCard
             article={item}
             onPress={() => handleArticlePress(item)}
             isFavorite={true}
             onToggleFavorite={() => handleRemoveFavorite(item.id)}
+            onMarkAsRead={() => markAsRead.mutate(item.id)}
             isRead={readArticleIds?.has(item.id)}
             index={index}
           />

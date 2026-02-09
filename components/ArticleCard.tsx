@@ -14,6 +14,7 @@ interface ArticleCardProps {
   onToggleFavorite?: () => void;
   isRead?: boolean;
   index?: number;
+  onLongPress?: () => void;
 }
 
 function formatDate(dateString: string | null): string {
@@ -28,7 +29,7 @@ function formatDate(dateString: string | null): string {
   return `${day} ${month} à ${hours}:${minutes}`;
 }
 
-export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, isRead, index = 0 }: ArticleCardProps) {
+export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, isRead, index = 0, onLongPress }: ArticleCardProps) {
   const colors = useColors();
   const styles = createStyles(colors);
   const hasImage = !!article.image_url;
@@ -41,8 +42,11 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, is
   return (
     <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
       <TouchableOpacity
+        testID="article-card"
         style={[styles.card, isRead && styles.cardRead]}
         onPress={handlePress}
+        onLongPress={onLongPress}
+        delayLongPress={400}
         activeOpacity={0.8}
       >
         {hasImage && (

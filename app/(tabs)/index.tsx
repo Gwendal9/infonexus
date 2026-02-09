@@ -17,6 +17,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ArticleCard } from '@/components/ArticleCard';
+import { SwipeableArticleCard } from '@/components/SwipeableArticleCard';
 import { ArticleCardSkeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/Button';
@@ -216,11 +217,12 @@ export default function FeedScreen() {
             data={searchResults ?? []}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => (
-              <ArticleCard
+              <SwipeableArticleCard
                 article={item as unknown as ArticleWithSource}
                 onPress={() => handleArticlePress(item as unknown as ArticleWithSource)}
                 isFavorite={favoriteIds?.has(item.id)}
                 onToggleFavorite={() => handleToggleFavorite(item.id)}
+                onMarkAsRead={() => markAsRead.mutate(item.id)}
                 isRead={readArticleIds?.has(item.id)}
                 index={index}
               />
@@ -347,6 +349,7 @@ export default function FeedScreen() {
                   onRefresh={handleRefresh}
                   onArticlePress={handleArticlePress}
                   onToggleFavorite={handleToggleFavorite}
+                  onMarkAsRead={(id: string) => markAsRead.mutate(id)}
                   colors={colors}
                 />
               )}
@@ -381,6 +384,7 @@ interface ThemeArticleListProps {
   onRefresh: () => void;
   onArticlePress: (article: ArticleWithSource) => void;
   onToggleFavorite: (articleId: string) => void;
+  onMarkAsRead: (articleId: string) => void;
   colors: ReturnType<typeof useColors>;
 }
 
@@ -394,6 +398,7 @@ function ThemeArticleList({
   onRefresh,
   onArticlePress,
   onToggleFavorite,
+  onMarkAsRead,
   colors,
 }: ThemeArticleListProps) {
   const styles = createStyles(colors);
@@ -403,11 +408,12 @@ function ThemeArticleList({
       data={articles}
       keyExtractor={(item) => item.id}
       renderItem={({ item, index }) => (
-        <ArticleCard
+        <SwipeableArticleCard
           article={item}
           onPress={() => onArticlePress(item)}
           isFavorite={favoriteIds?.has(item.id)}
           onToggleFavorite={() => onToggleFavorite(item.id)}
+          onMarkAsRead={() => onMarkAsRead(item.id)}
           isRead={readArticleIds?.has(item.id)}
           index={index}
         />

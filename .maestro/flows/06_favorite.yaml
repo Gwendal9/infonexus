@@ -1,0 +1,17 @@
+appId: com.infonexus.app
+---
+# Tap first article card
+- tapOn:
+    id: "article-card"
+    index: 0
+- waitForAnimationToEnd
+# Toggle favorite
+- tapOn:
+    id: "favorite-button"
+- waitForAnimationToEnd
+# Go back
+- back
+# Navigate to favorites tab
+- tapOn:
+    id: "tab-favorites"
+- waitForAnimationToEnd

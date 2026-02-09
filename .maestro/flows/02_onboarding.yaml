@@ -1,0 +1,6 @@
+appId: com.infonexus.app
+---
+# Skip onboarding or complete it
+- assertVisible: "Choisissez vos thèmes"
+- tapOn: "Passer"
+- waitForAnimationToEnd

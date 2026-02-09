@@ -84,7 +84,7 @@ export function AnimatedHeart({
   }));
 
   return (
-    <TouchableOpacity onPress={handlePress} style={[styles.container, style]} activeOpacity={0.7}>
+    <TouchableOpacity testID="favorite-button" onPress={handlePress} style={[styles.container, style]} activeOpacity={0.7}>
       {/* Burst effect */}
       <Animated.View style={[styles.burst, burstAnimatedStyle]}>
         <Ionicons name="heart" size={size} color={heartColor} />

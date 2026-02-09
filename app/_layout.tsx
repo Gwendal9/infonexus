@@ -1,19 +1,26 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, StyleSheet, View } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useQueryClient } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { ThemeProvider, useColors, useThemeContext } from '@/contexts/ThemeContext';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
 import { NetworkProvider, useNetwork } from '@/contexts/NetworkContext';
-import { ToastProvider } from '@/contexts/ToastContext';
+import { ToastProvider, useToast } from '@/contexts/ToastContext';
 import { WidgetProvider } from '@/contexts/WidgetContext';
 import { TopicProvider } from '@/contexts/TopicContext';
 import { Onboarding } from '@/components/Onboarding';
+import { AppErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeDatabase } from '@/lib/db';
 import { processSyncQueue } from '@/lib/sync';
+import { registerBackgroundFetch, getBackgroundRefreshResult } from '@/lib/backgroundRefresh';
+import { initSentry, Sentry } from '@/lib/sentry';
+
+// Initialize Sentry before any React code
+initSentry();
 
 function RootLayoutNav() {
   const colors = useColors();
@@ -49,6 +56,33 @@ function RootLayoutNav() {
       });
     }
   }, [isOnline, dbReady, session]);
+
+  // Register background fetch when ready
+  useEffect(() => {
+    if (dbReady && session) {
+      registerBackgroundFetch();
+    }
+  }, [dbReady, session]);
+
+  // Check for background refresh results when app comes to foreground
+  const queryClient = useQueryClient();
+  const { showSuccess } = useToast();
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        const result = await getBackgroundRefreshResult();
+        if (result && result.articlesCount > 0) {
+          showSuccess(`${result.articlesCount} nouveaux articles`);
+          queryClient.invalidateQueries({ queryKey: ['articles'] });
+        }
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [queryClient, showSuccess]);
 
   useEffect(() => {
     if (authLoading || onboardingLoading || !dbReady) return;
@@ -110,15 +144,19 @@ function AppProviders({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function RootLayout() {
+function RootLayoutInner() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppProviders>
-        <RootLayoutNav />
-      </AppProviders>
+      <AppErrorBoundary>
+        <AppProviders>
+          <RootLayoutNav />
+        </AppProviders>
+      </AppErrorBoundary>
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayoutInner);
 
 const createStyles = (colors: ReturnType<typeof useColors>) =>
   StyleSheet.create({

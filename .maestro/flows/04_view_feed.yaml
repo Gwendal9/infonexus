@@ -1,0 +1,16 @@
+appId: com.infonexus.app
+---
+# Navigate to feed tab
+- tapOn:
+    id: "tab-feed"
+- waitForAnimationToEnd
+# Pull to refresh
+- swipe:
+    direction: DOWN
+    from:
+      x: "50%"
+      y: "30%"
+    to:
+      x: "50%"
+      y: "70%"
+- waitForAnimationToEnd

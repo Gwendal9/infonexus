@@ -1,0 +1,13 @@
+appId: com.infonexus.app
+---
+# Navigate to Sources tab
+- tapOn:
+    id: "tab-sources"
+- assertVisible: "Sources"
+- waitForAnimationToEnd
+# Tap add source FAB
+- tapOn:
+    id: "add-source-button"
+- assertVisible: "Ajouter une source"
+# Close modal
+- back
