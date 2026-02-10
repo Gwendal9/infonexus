@@ -42,6 +42,27 @@ function formatDate(dateString: string | null): string {
   });
 }
 
+function formatRelativeDate(dateString: string | null): string {
+  if (!dateString) return '';
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMs / 3600000);
+  const diffD = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return "À l'instant";
+  if (diffMin < 60) return `Il y a ${diffMin} min`;
+  if (diffH < 24) return `Il y a ${diffH}h`;
+  if (diffD === 1) return 'Hier';
+  if (diffD < 7) return `Il y a ${diffD} jours`;
+  return formatDate(dateString);
+}
+
+function estimateReadTime(title: string, summary: string | null): string {
+  const words = (title + ' ' + (summary || '')).split(/\s+/).length;
+  const minutes = Math.max(1, Math.round((words * 3) / 200));
+  return `${minutes} min de lecture`;
+}
+
 export default function ArticleDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -161,11 +182,15 @@ export default function ArticleDetailScreen() {
         <View style={styles.content}>
           {/* Source & Date */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.meta}>
-            <View style={styles.sourceInfo}>
-              <View style={styles.sourceDot} />
-              <Text style={styles.sourceName}>{article.source?.name || 'Source inconnue'}</Text>
+            <View style={styles.sourceRow}>
+              <View style={styles.sourceInfo}>
+                <View style={styles.sourceDot} />
+                <Text style={styles.sourceName}>{article.source?.name || 'Source inconnue'}</Text>
+              </View>
+              <Text style={styles.relativeDate}>{formatRelativeDate(article.published_at)}</Text>
             </View>
             <Text style={styles.date}>{formatDate(article.published_at)}</Text>
+            <Text style={styles.readTimeLabel}>{estimateReadTime(article.title, article.summary)}</Text>
           </Animated.View>
 
           {/* Title */}
@@ -281,12 +306,27 @@ const createStyles = (colors: ReturnType<typeof useColors>, topInset: number) =>
     },
     meta: {
       marginBottom: spacing.md,
+      gap: spacing.xxs,
+    },
+    sourceRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
     sourceInfo: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
-      marginBottom: spacing.xs,
+    },
+    relativeDate: {
+      ...typography.caption,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    readTimeLabel: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: '500',
     },
     sourceDot: {
       width: 10,

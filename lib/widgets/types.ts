@@ -1,6 +1,6 @@
 // Widget catalog and configuration types
 
-export type WidgetType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word';
+export type WidgetType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | 'github' | 'history' | 'currency';
 
 export interface WidgetDefinition {
   id: WidgetType;
@@ -69,6 +69,30 @@ export const WIDGET_CATALOG: WidgetDefinition[] = [
     defaultEnabled: false,
     hasSettings: false,
   },
+  {
+    id: 'github',
+    name: 'GitHub Trending',
+    description: 'Repos populaires du moment sur GitHub',
+    icon: 'logo-github',
+    defaultEnabled: false,
+    hasSettings: false,
+  },
+  {
+    id: 'history',
+    name: "Aujourd'hui",
+    description: "Ce qui s'est passé aujourd'hui dans l'histoire",
+    icon: 'time',
+    defaultEnabled: false,
+    hasSettings: false,
+  },
+  {
+    id: 'currency',
+    name: 'Devises',
+    description: 'Taux de change en temps réel',
+    icon: 'cash',
+    defaultEnabled: false,
+    hasSettings: true,
+  },
 ];
 
 // Weather widget settings
@@ -119,6 +143,16 @@ export interface NewsSettings {
   apiKey?: string;
 }
 
+// Currency widget settings
+export interface CurrencyPair {
+  from: string;
+  to: string;
+}
+
+export interface CurrencySettings {
+  pairs: CurrencyPair[];
+}
+
 // All widget settings
 export interface WidgetSettings {
   weather: WeatherSettings;
@@ -126,6 +160,7 @@ export interface WidgetSettings {
   football: FootballSettings;
   stock: StockSettings;
   news: NewsSettings;
+  currency: CurrencySettings;
 }
 
 // Widget state (enabled + settings)
@@ -199,6 +234,16 @@ export const NEWS_CATEGORIES: { value: NewsCategory; label: string }[] = [
   { value: 'science', label: 'Science' },
 ];
 
+// Preset currency pairs
+export const PRESET_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'CNY'] as const;
+
+export const PRESET_CURRENCY_PAIRS: CurrencyPair[] = [
+  { from: 'EUR', to: 'USD' },
+  { from: 'EUR', to: 'GBP' },
+  { from: 'USD', to: 'JPY' },
+  { from: 'EUR', to: 'CHF' },
+];
+
 // Default configuration
 export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   enabled: {
@@ -209,6 +254,9 @@ export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
     stock: false,
     news: false,
     word: false,
+    github: false,
+    history: false,
+    currency: false,
   },
   settings: {
     weather: {
@@ -237,6 +285,12 @@ export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
     },
     news: {
       category: 'general',
+    },
+    currency: {
+      pairs: [
+        { from: 'EUR', to: 'USD' },
+        { from: 'EUR', to: 'GBP' },
+      ],
     },
   },
 };

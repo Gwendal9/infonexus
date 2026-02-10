@@ -17,7 +17,7 @@ import { AppErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeDatabase } from '@/lib/db';
 import { processSyncQueue } from '@/lib/sync';
 import { registerBackgroundFetch, getBackgroundRefreshResult } from '@/lib/backgroundRefresh';
-import { initSentry, Sentry } from '@/lib/sentry';
+import { initSentry } from '@/lib/sentry';
 
 // Initialize Sentry before any React code
 initSentry();
@@ -156,7 +156,7 @@ function RootLayoutInner() {
   );
 }
 
-export default Sentry.wrap(RootLayoutInner);
+export default RootLayoutInner;
 
 const createStyles = (colors: ReturnType<typeof useColors>) =>
   StyleSheet.create({

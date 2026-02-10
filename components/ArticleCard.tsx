@@ -17,16 +17,30 @@ interface ArticleCardProps {
   onLongPress?: () => void;
 }
 
-function formatDate(dateString: string | null): string {
+function formatRelativeDate(dateString: string | null): string {
   if (!dateString) return '';
-  const date = new Date(dateString);
+  const now = Date.now();
+  const date = new Date(dateString).getTime();
+  const diffMs = now - date;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMs / 3600000);
+  const diffD = Math.floor(diffMs / 86400000);
 
-  const day = date.getDate();
-  const month = date.toLocaleDateString('fr-FR', { month: 'short' });
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
+  if (diffMin < 1) return "à l'instant";
+  if (diffMin < 60) return `il y a ${diffMin} min`;
+  if (diffH < 24) return `il y a ${diffH}h`;
+  if (diffD === 1) return 'hier';
+  if (diffD < 7) return `il y a ${diffD}j`;
+  if (diffD < 30) return `il y a ${Math.floor(diffD / 7)} sem`;
+  return `il y a ${Math.floor(diffD / 30)} mois`;
+}
 
-  return `${day} ${month} à ${hours}:${minutes}`;
+function estimateReadTime(title: string, summary: string | null): string {
+  const words = (title + ' ' + (summary || '')).split(/\s+/).length;
+  // Articles have full content beyond summary, estimate ~3x the visible text
+  const estimatedTotal = words * 3;
+  const minutes = Math.max(1, Math.round(estimatedTotal / 200));
+  return `${minutes} min`;
 }
 
 export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, isRead, index = 0, onLongPress }: ArticleCardProps) {
@@ -49,53 +63,84 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, is
         delayLongPress={400}
         activeOpacity={0.8}
       >
-        {hasImage && (
-          <View style={styles.imageContainer}>
-            <Image source={{ uri: article.image_url! }} style={styles.image} resizeMode="cover" />
-            <View style={styles.imageOverlay} />
-            {onToggleFavorite && (
-              <AnimatedHeart
-                isFavorite={isFavorite ?? false}
-                onPress={onToggleFavorite}
-                size={24}
-                style={styles.favoriteButton}
-                inactiveColor="#FFFFFF"
-              />
-            )}
-          </View>
-        )}
-
-        <View style={styles.content}>
-          <View style={styles.sourceRow}>
-            <View style={styles.sourceInfo}>
-              {!isRead && <View style={styles.unreadDot} />}
-              <Text style={[styles.sourceName, isRead && styles.textRead]} numberOfLines={1}>
-                {article.source?.name || 'Source inconnue'}
-              </Text>
-            </View>
-            <View style={styles.rightActions}>
-              <Text style={styles.date}>{formatDate(article.published_at)}</Text>
-              {!hasImage && onToggleFavorite && (
+        {hasImage ? (
+          <>
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: article.image_url! }} style={styles.image} resizeMode="cover" />
+              {onToggleFavorite && (
                 <AnimatedHeart
                   isFavorite={isFavorite ?? false}
                   onPress={onToggleFavorite}
-                  size={20}
-                  style={styles.favoriteInline}
+                  size={22}
+                  style={styles.favoriteOnImage}
+                  inactiveColor="#FFFFFF"
                 />
               )}
             </View>
+
+            <View style={styles.content}>
+              <View style={styles.metaRow}>
+                {!isRead && <View style={styles.unreadDot} />}
+                <Text style={[styles.sourceName, isRead && styles.textRead]} numberOfLines={1}>
+                  {article.source?.name || 'Source inconnue'}
+                </Text>
+                <Text style={styles.separator}>·</Text>
+                <Text style={styles.date}>{formatRelativeDate(article.published_at)}</Text>
+              </View>
+
+              <Text style={[styles.title, isRead && styles.titleRead]} numberOfLines={3}>
+                {article.title}
+              </Text>
+
+              {article.summary && (
+                <Text style={[styles.summary, isRead && styles.textRead]} numberOfLines={2}>
+                  {article.summary}
+                </Text>
+              )}
+
+              <Text style={styles.readTime}>
+                {estimateReadTime(article.title, article.summary)}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <View style={styles.noImageLayout}>
+            <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
+            <View style={styles.noImageContent}>
+              <View style={styles.metaRow}>
+                {!isRead && <View style={styles.unreadDot} />}
+                <Text style={[styles.sourceName, isRead && styles.textRead]} numberOfLines={1}>
+                  {article.source?.name || 'Source inconnue'}
+                </Text>
+                <Text style={styles.separator}>·</Text>
+                <Text style={styles.date}>{formatRelativeDate(article.published_at)}</Text>
+              </View>
+
+              <Text style={[styles.title, isRead && styles.titleRead]} numberOfLines={3}>
+                {article.title}
+              </Text>
+
+              {article.summary && (
+                <Text style={[styles.summary, isRead && styles.textRead]} numberOfLines={2}>
+                  {article.summary}
+                </Text>
+              )}
+
+              <View style={styles.footer}>
+                <Text style={styles.readTime}>
+                  {estimateReadTime(article.title, article.summary)}
+                </Text>
+                {onToggleFavorite && (
+                  <AnimatedHeart
+                    isFavorite={isFavorite ?? false}
+                    onPress={onToggleFavorite}
+                    size={20}
+                  />
+                )}
+              </View>
+            </View>
           </View>
-
-          <Text style={[styles.title, isRead && styles.titleRead]} numberOfLines={3}>
-            {article.title}
-          </Text>
-
-          {article.summary && (
-            <Text style={[styles.summary, isRead && styles.textRead]} numberOfLines={2}>
-              {article.summary}
-            </Text>
-          )}
-        </View>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -109,31 +154,24 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       marginBottom: spacing.md,
       overflow: 'hidden',
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      elevation: 4,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 3,
     },
     cardRead: {
-      opacity: 0.7,
+      opacity: 0.65,
     },
+    // --- Image layout ---
     imageContainer: {
       position: 'relative',
     },
     image: {
       width: '100%',
-      height: 180,
+      height: 160,
       backgroundColor: colors.background,
     },
-    imageOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 60,
-      backgroundColor: 'transparent',
-    },
-    favoriteButton: {
+    favoriteOnImage: {
       position: 'absolute',
       top: spacing.sm,
       right: spacing.sm,
@@ -143,57 +181,72 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
     },
     content: {
       padding: spacing.md,
+      gap: spacing.xs,
     },
-    sourceRow: {
+    // --- No-image layout ---
+    noImageLayout: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: spacing.sm,
     },
-    sourceInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
+    accentBar: {
+      width: 4,
+      borderTopLeftRadius: 16,
+      borderBottomLeftRadius: 16,
+    },
+    noImageContent: {
       flex: 1,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    // --- Shared ---
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
     },
     unreadDot: {
-      width: 8,
-      height: 8,
+      width: 7,
+      height: 7,
       borderRadius: 4,
       backgroundColor: colors.primary,
     },
     sourceName: {
-      fontSize: 14,
+      ...typography.caption,
       fontWeight: '600',
       color: colors.textSecondary,
-      flex: 1,
+      flexShrink: 1,
     },
-    rightActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
+    separator: {
+      ...typography.caption,
+      color: colors.textMuted,
     },
     date: {
       ...typography.caption,
       color: colors.textMuted,
-      fontWeight: '500',
-    },
-    favoriteInline: {
-      padding: spacing.xxs,
     },
     title: {
-      ...typography.titleMd,
+      fontSize: 17,
+      fontWeight: '700',
       color: colors.textPrimary,
-      marginBottom: spacing.xs,
-      lineHeight: 24,
+      lineHeight: 23,
     },
     titleRead: {
       color: colors.textSecondary,
     },
     summary: {
       ...typography.body,
-      color: colors.textSecondary,
+      color: colors.textMuted,
       lineHeight: 20,
+    },
+    readTime: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.xxs,
     },
     textRead: {
       color: colors.textMuted,

@@ -8,6 +8,7 @@ import {
   FootballSettings,
   StockSettings,
   NewsSettings,
+  CurrencySettings,
   DEFAULT_WIDGET_CONFIG,
   PRESET_STOCKS,
   PRESET_ETFS,
@@ -30,6 +31,8 @@ interface WidgetContextType {
   updateStockSettings: (settings: Partial<StockSettings>) => void;
   // Update news settings
   updateNewsSettings: (settings: Partial<NewsSettings>) => void;
+  // Update currency settings
+  updateCurrencySettings: (settings: Partial<CurrencySettings>) => void;
   // Reset to defaults
   resetConfig: () => void;
 }
@@ -69,6 +72,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
               return { ...merged, items: filteredItems.length > 0 ? filteredItems : DEFAULT_WIDGET_CONFIG.settings.stock.items };
             })(),
             news: { ...DEFAULT_WIDGET_CONFIG.settings.news, ...parsed.settings?.news },
+            currency: { ...DEFAULT_WIDGET_CONFIG.settings.currency, ...parsed.settings?.currency },
           },
         });
       }
@@ -186,6 +190,23 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateCurrencySettings = useCallback((settings: Partial<CurrencySettings>) => {
+    setConfig((prev) => {
+      const newConfig = {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          currency: {
+            ...prev.settings.currency,
+            ...settings,
+          },
+        },
+      };
+      saveConfig(newConfig);
+      return newConfig;
+    });
+  }, []);
+
   const resetConfig = useCallback(() => {
     setConfig(DEFAULT_WIDGET_CONFIG);
     saveConfig(DEFAULT_WIDGET_CONFIG);
@@ -202,6 +223,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
         updateFootballSettings,
         updateStockSettings,
         updateNewsSettings,
+        updateCurrencySettings,
         resetConfig,
       }}
     >

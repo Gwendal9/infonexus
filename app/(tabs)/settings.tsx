@@ -15,6 +15,8 @@ import {
   PRESET_STOCKS,
   PRESET_ETFS,
   NEWS_CATEGORIES,
+  PRESET_CURRENCIES,
+  PRESET_CURRENCY_PAIRS,
   WidgetType,
 } from '@/lib/widgets/types';
 import { spacing } from '@/theme/spacing';
@@ -43,6 +45,7 @@ export default function SettingsScreen() {
     updateFootballSettings,
     updateStockSettings,
     updateNewsSettings,
+    updateCurrencySettings,
   } = useWidgetConfig();
 
   const [expandedWidget, setExpandedWidget] = useState<WidgetType | null>(null);
@@ -639,6 +642,39 @@ export default function SettingsScreen() {
                             ]}
                           >
                             {cat.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* Currency Settings */}
+              {widget.id === 'currency' && isExpanded && isEnabled && (
+                <View style={styles.settingsContent}>
+                  <Text style={styles.settingsLabel}>Paires de devises</Text>
+                  <View style={styles.optionsGrid}>
+                    {PRESET_CURRENCY_PAIRS.map((pair) => {
+                      const key = `${pair.from}-${pair.to}`;
+                      const isSelected = config.settings.currency.pairs.some(
+                        (p) => p.from === pair.from && p.to === pair.to
+                      );
+                      return (
+                        <TouchableOpacity
+                          key={key}
+                          style={[styles.optionChip, isSelected && styles.optionChipActive]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            const current = config.settings.currency.pairs;
+                            const newPairs = isSelected
+                              ? current.filter((p) => !(p.from === pair.from && p.to === pair.to))
+                              : [...current, pair];
+                            updateCurrencySettings({ pairs: newPairs });
+                          }}
+                        >
+                          <Text style={[styles.optionChipText, isSelected && styles.optionChipTextActive]}>
+                            {pair.from}/{pair.to}
                           </Text>
                         </TouchableOpacity>
                       );

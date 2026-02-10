@@ -11,6 +11,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { ScrollToTopButton, useScrollToTop } from '@/components/ScrollToTopButton';
 import PagerView from 'react-native-pager-view';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -163,6 +164,25 @@ export default function FeedScreen() {
     return articles.filter((a) => sourcesWithTheme.includes(a.source_id));
   }, [articles, sourceThemes]);
 
+  // Count unread articles per tab
+  const unreadCounts = useMemo(() => {
+    if (!articles || !readArticleIds) return new Map<string | null, number>();
+    const counts = new Map<string | null, number>();
+
+    // "Tous" tab
+    counts.set(null, articles.filter(a => !readArticleIds.has(a.id)).length);
+
+    // Theme tabs
+    if (themes && sourceThemes) {
+      for (const theme of themes) {
+        const themeArticles = getArticlesForTheme(theme.id);
+        counts.set(theme.id, themeArticles.filter(a => !readArticleIds.has(a.id)).length);
+      }
+    }
+
+    return counts;
+  }, [articles, readArticleIds, themes, sourceThemes, getArticlesForTheme]);
+
   const isRefreshing = isRefetching || refreshSources.isPending;
 
   if (isLoading) {
@@ -269,6 +289,7 @@ export default function FeedScreen() {
             {allTabs.map((tab, index) => {
               const isSelected = index === currentPage;
               const tabKey = tab.type === 'topic' ? `topic-${tab.id}` : tab.type === 'theme' ? `theme-${tab.id}` : 'all';
+              const unread = tab.type !== 'topic' ? (unreadCounts.get(tab.id) ?? 0) : 0;
               return (
                 <TouchableOpacity
                   key={tabKey}
@@ -284,15 +305,24 @@ export default function FeedScreen() {
                   } : undefined}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.tabText,
-                      isSelected && styles.tabTextActive,
-                      isSelected && tab.id && { color: tab.color },
-                    ]}
-                  >
-                    {tab.name}
-                  </Text>
+                  <View style={styles.tabLabelRow}>
+                    <Text
+                      style={[
+                        styles.tabText,
+                        isSelected && styles.tabTextActive,
+                        isSelected && tab.id && { color: tab.color },
+                      ]}
+                    >
+                      {tab.name}
+                    </Text>
+                    {unread > 0 && !isSelected && (
+                      <View style={[styles.unreadBadge, { backgroundColor: tab.id ? tab.color : colors.primary }]}>
+                        <Text style={styles.unreadBadgeText}>
+                          {unread > 99 ? '99+' : unread}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   {isSelected && (
                     <View
                       style={[
@@ -402,59 +432,70 @@ function ThemeArticleList({
   colors,
 }: ThemeArticleListProps) {
   const styles = createStyles(colors);
+  const listRef = useRef<FlatList>(null);
+  const { showButton, onScroll } = useScrollToTop();
 
   return (
-    <FlatList
-      data={articles}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item, index }) => (
-        <SwipeableArticleCard
-          article={item}
-          onPress={() => onArticlePress(item)}
-          isFavorite={favoriteIds?.has(item.id)}
-          onToggleFavorite={() => onToggleFavorite(item.id)}
-          onMarkAsRead={() => onMarkAsRead(item.id)}
-          isRead={readArticleIds?.has(item.id)}
-          index={index}
-        />
-      )}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-        />
-      }
-      ListEmptyComponent={
-        <EmptyState
-          icon={themeId ? 'pricetag-outline' : 'newspaper-outline'}
-          title="Aucun article"
-          description={
-            themeId
-              ? 'Aucun article pour ce thème. Assignez des sources à ce thème.'
-              : 'Ajoutez des sources puis tirez pour rafraîchir.'
-          }
-        >
-          {!themeId && (
-            <Button
-              title="Charger les articles"
-              onPress={onRefresh}
-              loading={isRefreshing}
-            />
-          )}
-        </EmptyState>
-      }
-      contentContainerStyle={articles.length === 0 ? styles.emptyList : styles.list}
-      ListHeaderComponent={
-        isPending ? (
-          <Animated.View entering={FadeIn} style={styles.refreshBanner}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.refreshText}>Récupération des articles...</Text>
-          </Animated.View>
-        ) : null
-      }
-    />
+    <View style={{ flex: 1 }}>
+      <FlatList
+        ref={listRef}
+        data={articles}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item, index }) => (
+          <SwipeableArticleCard
+            article={item}
+            onPress={() => onArticlePress(item)}
+            isFavorite={favoriteIds?.has(item.id)}
+            onToggleFavorite={() => onToggleFavorite(item.id)}
+            onMarkAsRead={() => onMarkAsRead(item.id)}
+            isRead={readArticleIds?.has(item.id)}
+            index={index}
+          />
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon={themeId ? 'pricetag-outline' : 'newspaper-outline'}
+            title="Aucun article"
+            description={
+              themeId
+                ? 'Aucun article pour ce thème. Assignez des sources à ce thème.'
+                : 'Ajoutez des sources puis tirez pour rafraîchir.'
+            }
+          >
+            {!themeId && (
+              <Button
+                title="Charger les articles"
+                onPress={onRefresh}
+                loading={isRefreshing}
+              />
+            )}
+          </EmptyState>
+        }
+        contentContainerStyle={articles.length === 0 ? styles.emptyList : styles.list}
+        ListHeaderComponent={
+          isPending ? (
+            <Animated.View entering={FadeIn} style={styles.refreshBanner}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.refreshText}>Récupération des articles...</Text>
+            </Animated.View>
+          ) : null
+        }
+        onScroll={onScroll}
+        scrollEventThrottle={100}
+      />
+      <ScrollToTopButton
+        visible={showButton}
+        onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
+      />
+    </View>
   );
 }
 
@@ -502,6 +543,11 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       paddingHorizontal: spacing.lg,
       position: 'relative',
     },
+    tabLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
     tabText: {
       fontSize: 15,
       fontWeight: '600',
@@ -509,6 +555,19 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
     },
     tabTextActive: {
       color: colors.primary,
+    },
+    unreadBadge: {
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 5,
+    },
+    unreadBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '700',
     },
     tabIndicator: {
       position: 'absolute',

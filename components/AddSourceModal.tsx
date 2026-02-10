@@ -209,19 +209,24 @@ export function AddSourceModal({ visible, onClose, onAdd, loading, error, existi
               </View>
 
               {/* Categories or Back button */}
-              {!searchQuery && (
+              {!searchQuery && selectedCategory && (
+                <View style={styles.selectedCategoryRow}>
+                  <TouchableOpacity
+                    style={styles.backChip}
+                    onPress={() => setSelectedCategory(null)}
+                  >
+                    <Ionicons name="arrow-back" size={16} color={colors.primary} />
+                    <Text style={styles.backChipText}>Retour</Text>
+                  </TouchableOpacity>
+                  <View style={styles.categoryChipActive}>
+                    <Text style={styles.categoryTextActive}>{selectedCategory}</Text>
+                  </View>
+                </View>
+              )}
+              {!searchQuery && !selectedCategory && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
                   <View style={styles.categoriesRow}>
-                    {selectedCategory && (
-                      <TouchableOpacity
-                        style={styles.backChip}
-                        onPress={() => setSelectedCategory(null)}
-                      >
-                        <Ionicons name="arrow-back" size={16} color={colors.primary} />
-                        <Text style={styles.backChipText}>Retour</Text>
-                      </TouchableOpacity>
-                    )}
-                    {!selectedCategory && categories.map((cat) => (
+                    {categories.map((cat) => (
                       <TouchableOpacity
                         key={cat}
                         style={styles.categoryChip}
@@ -230,11 +235,6 @@ export function AddSourceModal({ visible, onClose, onAdd, loading, error, existi
                         <Text style={styles.categoryText}>{cat}</Text>
                       </TouchableOpacity>
                     ))}
-                    {selectedCategory && (
-                      <View style={styles.categoryChipActive}>
-                        <Text style={styles.categoryTextActive}>{selectedCategory}</Text>
-                      </View>
-                    )}
                   </View>
                 </ScrollView>
               )}
@@ -475,6 +475,13 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       paddingHorizontal: spacing.lg,
       gap: spacing.sm,
     },
+    selectedCategoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      marginTop: spacing.md,
+      gap: spacing.sm,
+    },
     backChip: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -483,7 +490,6 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       paddingVertical: spacing.sm,
       borderRadius: 20,
       backgroundColor: colors.primary + '15',
-      marginRight: spacing.sm,
     },
     backChipText: {
       ...typography.body,

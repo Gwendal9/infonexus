@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import {
   FlatList,
   RefreshControl,
   StyleSheet,
   View,
 } from 'react-native';
+import { ScrollToTopButton, useScrollToTop } from '@/components/ScrollToTopButton';
 import { useRouter } from 'expo-router';
 import { SwipeableArticleCard } from '@/components/SwipeableArticleCard';
 import { ArticleCardSkeleton } from '@/components/Skeleton';
@@ -26,6 +27,8 @@ export default function FavoritesScreen() {
   const markAsRead = useMarkAsRead();
 
   const styles = createStyles(colors);
+  const listRef = useRef<FlatList>(null);
+  const { showButton, onScroll } = useScrollToTop();
 
   const handleArticlePress = useCallback((article: ArticleWithSource) => {
     if (!readArticleIds?.has(article.id)) {
@@ -55,6 +58,7 @@ export default function FavoritesScreen() {
   return (
     <View style={styles.container}>
       <FlatList
+        ref={listRef}
         data={favorites}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
@@ -83,6 +87,12 @@ export default function FavoritesScreen() {
             description="Appuyez sur le cœur d'un article pour le sauvegarder ici."
           />
         }
+        onScroll={onScroll}
+        scrollEventThrottle={100}
+      />
+      <ScrollToTopButton
+        visible={showButton}
+        onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
       />
     </View>
   );

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { ScrollToTopButton, useScrollToTop } from '@/components/ScrollToTopButton';
 import { ArticleCard } from '@/components/ArticleCard';
 import { EmptyState } from '@/components/EmptyState';
 import { useTopicArticles, TopicArticle } from '@/lib/queries/useTopicArticles';
@@ -64,30 +65,42 @@ export function TopicArticleList({ topicId }: TopicArticleListProps) {
     </View>
   ), [handlePress, favoriteIds, readArticleIds, handleToggleFavorite, styles]);
 
+  const listRef = useRef<FlatList>(null);
+  const { showButton, onScroll } = useScrollToTop();
+
   return (
-    <FlatList
-      data={articles}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefreshing}
-          onRefresh={refresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-        />
-      }
-      ListEmptyComponent={
-        isLoading ? null : (
-          <EmptyState
-            icon="search-outline"
-            title="Aucun article"
-            description="Aucun article pour ce sujet. Modifiez les mots-clés."
+    <View style={{ flex: 1 }}>
+      <FlatList
+        ref={listRef}
+        data={articles}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
-        )
-      }
-      contentContainerStyle={articles.length === 0 ? styles.emptyList : styles.list}
-    />
+        }
+        ListEmptyComponent={
+          isLoading ? null : (
+            <EmptyState
+              icon="search-outline"
+              title="Aucun article"
+              description="Aucun article pour ce sujet. Modifiez les mots-clés."
+            />
+          )
+        }
+        contentContainerStyle={articles.length === 0 ? styles.emptyList : styles.list}
+        onScroll={onScroll}
+        scrollEventThrottle={100}
+      />
+      <ScrollToTopButton
+        visible={showButton}
+        onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
+      />
+    </View>
   );
 }
 

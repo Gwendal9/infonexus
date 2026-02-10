@@ -17,8 +17,7 @@
       "expo-router",
       "expo-font",
       "expo-background-fetch",
-      "expo-task-manager",
-      "@sentry/react-native/expo"
+      "expo-task-manager"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -19,6 +19,9 @@ import { FootballWidget } from '@/components/widgets/FootballWidget';
 import { StockWidget } from '@/components/widgets/StockWidget';
 import { NewsWidget } from '@/components/widgets/NewsWidget';
 import { WordWidget } from '@/components/widgets/WordWidget';
+import { GitHubWidget } from '@/components/widgets/GitHubWidget';
+import { HistoryWidget } from '@/components/widgets/HistoryWidget';
+import { CurrencyWidget } from '@/components/widgets/CurrencyWidget';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
@@ -27,7 +30,7 @@ const GRID_PADDING = spacing.md;
 const GRID_GAP = spacing.sm;
 const WIDGET_SIZE = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
 
-type DetailType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | null;
+type DetailType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | 'github' | 'history' | 'currency' | null;
 
 export default function WidgetsScreen() {
   const colors = useColors();
@@ -49,8 +52,7 @@ export default function WidgetsScreen() {
     );
   }
 
-  const hasAnyWidget = config.enabled.weather || config.enabled.crypto || config.enabled.quote ||
-    config.enabled.football || config.enabled.stock || config.enabled.news || config.enabled.word;
+  const hasAnyWidget = Object.values(config.enabled).some(Boolean);
 
   const getModalTitle = (type: DetailType): string => {
     switch (type) {
@@ -61,6 +63,9 @@ export default function WidgetsScreen() {
       case 'stock': return 'Bourse';
       case 'news': return 'Actu';
       case 'word': return 'Mot du jour';
+      case 'github': return 'GitHub Trending';
+      case 'history': return "Aujourd'hui dans l'Histoire";
+      case 'currency': return 'Taux de change';
       default: return '';
     }
   };
@@ -141,6 +146,33 @@ export default function WidgetsScreen() {
                 <WordWidget compact />
               </TouchableOpacity>
             )}
+            {config.enabled.github && (
+              <TouchableOpacity
+                style={styles.widgetTile}
+                onPress={() => handleWidgetPress('github')}
+                activeOpacity={0.8}
+              >
+                <GitHubWidget compact />
+              </TouchableOpacity>
+            )}
+            {config.enabled.history && (
+              <TouchableOpacity
+                style={styles.widgetTile}
+                onPress={() => handleWidgetPress('history')}
+                activeOpacity={0.8}
+              >
+                <HistoryWidget compact />
+              </TouchableOpacity>
+            )}
+            {config.enabled.currency && (
+              <TouchableOpacity
+                style={styles.widgetTile}
+                onPress={() => handleWidgetPress('currency')}
+                activeOpacity={0.8}
+              >
+                <CurrencyWidget compact />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -169,6 +201,9 @@ export default function WidgetsScreen() {
             {detailModal === 'stock' && <StockWidget expanded />}
             {detailModal === 'news' && <NewsWidget expanded />}
             {detailModal === 'word' && <WordWidget expanded />}
+            {detailModal === 'github' && <GitHubWidget expanded />}
+            {detailModal === 'history' && <HistoryWidget expanded />}
+            {detailModal === 'currency' && <CurrencyWidget expanded />}
           </ScrollView>
         </View>
       </Modal>
