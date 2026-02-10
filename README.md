@@ -8,12 +8,13 @@ Une app épurée qui agrège l'info depuis les sources choisies par l'utilisateu
 
 ## Stack technique
 
-- **Mobile**: React Native + Expo + Expo Router
-- **Backend**: Supabase (PostgreSQL + Auth + Edge Functions)
+- **Mobile**: React Native 0.81 + Expo 54 + Expo Router
+- **Backend**: Supabase (PostgreSQL + Auth)
 - **Data fetching**: React Query
-- **Feed**: FlashList (Shopify)
-- **Offline**: expo-sqlite
+- **Offline**: expo-sqlite + sync queue
+- **Animations**: React Native Reanimated + Gesture Handler
 - **Validation**: Zod
+- **Build**: EAS (APK Android)
 
 ## Getting Started
 
@@ -31,7 +32,7 @@ npm run android
 npm run ios
 ```
 
-## Configuration Supabase
+## Configuration
 
 1. Créer un projet sur [database.new](https://database.new)
 2. Copier les clés API dans `.env`:
@@ -40,49 +41,83 @@ npm run ios
    EXPO_PUBLIC_SUPABASE_ANON_KEY=your_key
    ```
 
+### Build EAS
+
+Les variables d'environnement Supabase sont configurées dans `eas.json` pour chaque profil de build.
+
+```bash
+# Build APK Android
+eas build --platform android --profile preview
+```
+
 ## Fonctionnalités
 
-- **Sources RSS / HTML / YouTube** — Ajout par URL, détection automatique du type
-- **Feed scrollable** — Cartes visuelles avec titre, résumé, image, source
-- **Thèmes** — Organisation des sources par thème, onglets dans le feed
-- **Sujets personnalisés** — Filtrage par mots-clés sur le contenu (titre/résumé), enrichi par GNews API. 100 sujets pré-configurés avec mots-clés suggérés
-- **Widgets** — Météo, Crypto, Football, Bourse, Actu (GNews), Mot du jour, Citation
-- **Favoris & lecture** — Marquer articles comme lus/favoris
-- **Offline** — Articles cachés localement via SQLite
-- **Recherche** — Recherche globale dans les articles
+### Feed & Articles
+- **Sources RSS / HTML / YouTube** — Ajout par URL ou catalogue (32+ sources pré-configurées), détection automatique du type
+- **Feed scrollable** — Cartes visuelles avec titre, résumé, image, source, dates relatives et temps de lecture estimé
+- **Articles sans image** — Barre d'accent colorée pour un feed visuellement rythmé
+- **Thèmes** — Organisation des sources par thème, onglets dans le feed avec badges d'articles non lus
+- **Sujets personnalisés** — Filtrage par mots-clés (titre/résumé), enrichi par GNews API. 100 sujets pré-configurés
+- **Mode lecture** — Lecture in-app avec taille de police ajustable
+- **Favoris & lecture** — Marquer articles comme lus/favoris, swipe gestures
+- **Recherche globale** — Recherche en temps réel dans tous les articles
+- **Scroll-to-top** — Bouton flottant pour remonter rapidement dans les listes
+
+### Widgets (10)
+| Widget | Source | Clé API |
+|--------|--------|---------|
+| Météo | Open-Meteo | Non |
+| Crypto | CoinGecko | Non |
+| Citation du jour | Base locale | Non |
+| Football | API-Football | Non |
+| Bourse | Finnhub | Oui (gratuite) |
+| Actu | GNews | Oui (gratuite) |
+| Mot du jour | Base locale | Non |
+| GitHub Trending | GitHub API | Non |
+| Aujourd'hui dans l'Histoire | Base locale | Non |
+| Devises | Frankfurter (BCE) | Non |
+
+### Technique
+- **Offline first** — Articles cachés localement via SQLite, sync automatique au retour en ligne
+- **Background refresh** — Rafraîchissement en arrière-plan des sources
+- **Dark mode** — Thème clair, sombre ou système
+- **Haptics** — Retour haptique sur les interactions
+- **Onboarding** — Assistant 3 étapes (thèmes, sources, widgets)
+- **Santé des sources** — Suivi du taux de succès et historique des fetches
 
 ## Structure du projet
 
 ```
 infonexus/
 ├── app/                    # Routes Expo Router
-│   ├── (tabs)/             # Feed, Sources, Favoris, Widgets, Settings
-│   └── article/[id].tsx    # Détail article
-├── components/             # Composants UI réutilisables
-│   ├── widgets/            # Widgets (Weather, Crypto, Football, Stock, News, Word, Quote)
-│   ├── AddTopicModal.tsx   # Création/édition de sujets
-│   ├── TopicArticleList.tsx # Liste articles filtrés par sujet
+│   ├── (auth)/             # Login, Register
+│   ├── (tabs)/             # Feed, Sources, Favoris, Widgets, Réglages
+│   └── article/[id].tsx    # Détail article + mode lecture
+├── components/             # Composants UI
+│   ├── widgets/            # 10 widgets (Weather, Crypto, Football, Stock,
+│   │                       #   News, Word, Quote, GitHub, History, Currency)
+│   ├── onboarding/         # Wizard d'onboarding
+│   ├── ArticleCard.tsx     # Carte article (image/accent bar)
+│   ├── ScrollToTopButton.tsx
 │   └── ...
 ├── contexts/               # React Contexts
-│   ├── TopicContext.tsx     # Sujets personnalisés (AsyncStorage)
-│   ├── WidgetContext.tsx    # Configuration widgets (AsyncStorage)
-│   └── ...
+│   ├── ThemeContext.tsx     # Dark/light mode
+│   ├── TopicContext.tsx     # Sujets personnalisés
+│   ├── WidgetContext.tsx    # Configuration widgets
+│   ├── NetworkContext.tsx   # Détection online/offline
+│   └── ToastContext.tsx     # Notifications toast
 ├── lib/
 │   ├── queries/            # React Query hooks
 │   ├── mutations/          # React Query mutations
-│   ├── topics/             # Types et suggestions de sujets (100 groupes × 5-10 mots-clés)
-│   ├── widgets/            # Types et données widgets
+│   ├── topics/             # Types et 100 suggestions de sujets
+│   ├── widgets/            # Types, presets et config widgets
 │   ├── db/                 # SQLite (schema, operations)
-│   └── sync/               # Sync Supabase ↔ local
-├── theme/                  # Design tokens (colors, spacing, typography, palette)
-├── types/                  # Types TypeScript
-├── providers/              # React Context providers
-└── docs/                   # Documentation projet
+│   ├── services/           # RSS parser, HTML scraper, article reader
+│   └── sync/               # Sync Supabase <-> local
+├── providers/              # AuthProvider, QueryProvider
+├── theme/                  # Design tokens (colors, spacing, typography)
+└── types/                  # Types TypeScript
 ```
-
-## Documentation
-
-- [Project Context](docs/project-context.md) - Règles critiques pour les agents AI
 
 ## License
 
