@@ -289,33 +289,35 @@ export default function SourcesScreen() {
             <Text style={styles.assignModalSubtitle}>Sélectionnez les thèmes</Text>
 
             {themes && themes.length > 0 ? (
-              <View style={styles.themesList}>
-                {themes.map((theme) => {
-                  const isAssigned = selectedSourceThemes.includes(theme.id);
-                  return (
-                    <TouchableOpacity
-                      key={theme.id}
-                      style={[styles.themeRow, isAssigned && styles.themeRowActive]}
-                      onPress={() => handleToggleTheme(assignThemeSourceId, theme.id)}
-                      activeOpacity={0.7}
-                    >
-                      <View
-                        style={[
-                          styles.themeColorDot,
-                          { backgroundColor: theme.color },
-                          isAssigned && styles.themeColorDotActive,
-                        ]}
-                      />
-                      <Text style={[styles.themeName, isAssigned && styles.themeNameActive]}>
-                        {theme.name}
-                      </Text>
-                      {isAssigned && (
-                        <Ionicons name="checkmark" size={20} color={colors.primary} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <ScrollView style={styles.themesListScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.themesList}>
+                  {themes.map((theme) => {
+                    const isAssigned = selectedSourceThemes.includes(theme.id);
+                    return (
+                      <TouchableOpacity
+                        key={theme.id}
+                        style={[styles.themeRow, isAssigned && styles.themeRowActive]}
+                        onPress={() => handleToggleTheme(assignThemeSourceId, theme.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          style={[
+                            styles.themeColorDot,
+                            { backgroundColor: theme.color },
+                            isAssigned && styles.themeColorDotActive,
+                          ]}
+                        />
+                        <Text style={[styles.themeName, isAssigned && styles.themeNameActive]}>
+                          {theme.name}
+                        </Text>
+                        {isAssigned && (
+                          <Ionicons name="checkmark" size={20} color={colors.primary} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
             ) : (
               <View style={styles.noThemesModal}>
                 <Ionicons name="pricetags-outline" size={40} color={colors.textMuted} />
@@ -468,8 +470,12 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       marginTop: spacing.xxs,
       marginBottom: spacing.lg,
     },
+    themesListScroll: {
+      flex: 1,
+    },
     themesList: {
       gap: spacing.sm,
+      paddingBottom: spacing.md,
     },
     themeRow: {
       flexDirection: 'row',

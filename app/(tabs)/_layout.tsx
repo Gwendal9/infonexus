@@ -92,17 +92,16 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.05,
       shadowRadius: 8,
-      height: Platform.OS === 'ios' ? 88 : 64,
       paddingTop: spacing.xs,
     },
     tabLabel: {
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '600',
-      marginTop: 2,
+      marginTop: 1,
     },
     iconContainer: {
-      padding: spacing.xs,
-      borderRadius: 12,
+      padding: 3,
+      borderRadius: 10,
     },
     iconContainerActive: {
       backgroundColor: colors.primary + '15',

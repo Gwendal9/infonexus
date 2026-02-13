@@ -1,5 +1,6 @@
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
+import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pullFromSupabase } from '@/lib/sync';
@@ -41,21 +42,40 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
 
 export async function registerBackgroundFetch(): Promise<void> {
   try {
+    // Check if background fetch is available on this device/environment
+    const status = await BackgroundFetch.getStatusAsync();
+    if (status === BackgroundFetch.BackgroundFetchStatus.Restricted ||
+        status === BackgroundFetch.BackgroundFetchStatus.Denied) {
+      console.log('[BackgroundRefresh] Not available on this device (status:', status, ')');
+      return;
+    }
+
+    // Check if already registered to avoid duplicate registration errors
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_FETCH_TASK);
+    if (isRegistered) {
+      console.log('[BackgroundRefresh] Already registered');
+      return;
+    }
+
     await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
       minimumInterval: 15 * 60, // 15 minutes
       stopOnTerminate: false,
-      startOnBoot: true,
+      startOnBoot: Platform.OS === 'android',
     });
     console.log('[BackgroundRefresh] Registered');
   } catch (error) {
-    console.error('[BackgroundRefresh] Registration failed:', error);
+    // Silently fail - background refresh is a nice-to-have, not critical
+    console.log('[BackgroundRefresh] Registration not supported:', error);
   }
 }
 
 export async function unregisterBackgroundFetch(): Promise<void> {
   try {
-    await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
-    console.log('[BackgroundRefresh] Unregistered');
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_FETCH_TASK);
+    if (isRegistered) {
+      await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
+      console.log('[BackgroundRefresh] Unregistered');
+    }
   } catch {
     // Task may not be registered, ignore
   }

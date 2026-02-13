@@ -1,4 +1,5 @@
 import { ParsedArticle } from './rssParser';
+import { decodeHtmlEntities } from '@/lib/utils/decodeHtmlEntities';
 
 /**
  * Scrape articles from an HTML page
@@ -249,14 +250,7 @@ function resolveUrl(href: string, baseUrl: string): string | null {
 }
 
 function cleanText(text: string): string {
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
+  return decodeHtmlEntities(text)
     .replace(/\s+/g, ' ')
     .trim();
 }

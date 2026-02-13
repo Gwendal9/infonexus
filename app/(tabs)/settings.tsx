@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/Button';
@@ -236,7 +236,12 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       {/* Account Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Compte</Text>
@@ -724,6 +729,7 @@ export default function SettingsScreen() {
         <Text style={styles.footerSubtext}>Votre revue de presse personnalisée</Text>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1006,7 +1012,8 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
     footer: {
       alignItems: 'center',
       marginTop: spacing.xxl,
-      marginBottom: spacing.xxl,
+      marginBottom: spacing.xxl + 20,
+      paddingBottom: spacing.md,
     },
     footerText: {
       ...typography.titleMd,

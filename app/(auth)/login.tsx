@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { useAuth } from '@/providers/AuthProvider';
@@ -61,6 +62,7 @@ export default function LoginScreen() {
 
           {errors.general && (
             <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={18} color={colors.statusError} />
               <Text style={styles.errorBannerText}>{errors.general}</Text>
             </View>
           )}
@@ -69,21 +71,30 @@ export default function LoginScreen() {
             label="Email"
             placeholder="votre@email.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
+            }}
             error={errors.email}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
+            returnKeyType="next"
           />
 
           <Input
             label="Mot de passe"
             placeholder="Votre mot de passe"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
+            }}
             error={errors.password}
             secureTextEntry
             autoComplete="password"
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
           />
 
           <Button
@@ -141,15 +152,18 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       textAlign: 'center',
     },
     errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
       backgroundColor: colors.statusError + '15',
       borderRadius: 8,
-      padding: spacing.sm,
+      padding: spacing.sm + spacing.xs,
       marginBottom: spacing.md,
     },
     errorBannerText: {
       ...typography.body,
       color: colors.statusError,
-      textAlign: 'center',
+      flex: 1,
     },
     button: {
       marginTop: spacing.sm,

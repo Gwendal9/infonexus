@@ -14,6 +14,46 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function mapAuthError(message: string, context: 'signin' | 'signup'): string {
+  const msg = message.toLowerCase();
+
+  // Network / connectivity
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('timeout')) {
+    return 'Problème de connexion réseau. Vérifiez votre connexion internet et réessayez.';
+  }
+
+  // Rate limiting
+  if (msg.includes('rate limit') || msg.includes('too many requests') || msg.includes('email rate limit')) {
+    return 'Trop de tentatives. Veuillez patienter quelques minutes avant de réessayer.';
+  }
+
+  if (context === 'signup') {
+    if (msg.includes('already registered') || msg.includes('already been registered')) {
+      return 'Cet email est déjà associé à un compte. Essayez de vous connecter.';
+    }
+    if (msg.includes('weak') || msg.includes('password')) {
+      return 'Le mot de passe est trop faible. Utilisez au moins 6 caractères avec des lettres et des chiffres.';
+    }
+    if (msg.includes('invalid') && msg.includes('email')) {
+      return "L'adresse email n'est pas valide.";
+    }
+    return 'Impossible de créer le compte. Vérifiez vos informations et réessayez.';
+  }
+
+  // Sign in errors
+  if (msg.includes('invalid login credentials') || msg.includes('invalid_credentials')) {
+    return 'Email ou mot de passe incorrect. Vérifiez vos identifiants.';
+  }
+  if (msg.includes('email not confirmed')) {
+    return "Votre email n'a pas encore été confirmé. Vérifiez votre boîte de réception.";
+  }
+  if (msg.includes('user not found')) {
+    return 'Aucun compte trouvé avec cet email.';
+  }
+
+  return 'Une erreur est survenue. Veuillez réessayer.';
+}
+
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -58,10 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
 
     if (error) {
-      if (error.message.includes('already registered')) {
-        return { error: new Error('Cet email est déjà utilisé') };
-      }
-      return { error };
+      return { error: new Error(mapAuthError(error.message, 'signup')) };
     }
     return { error: null };
   };
@@ -73,7 +110,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
 
     if (error) {
-      return { error: new Error('Email ou mot de passe incorrect') };
+      return { error: new Error(mapAuthError(error.message, 'signin')) };
     }
     return { error: null };
   };

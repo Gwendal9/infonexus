@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { decodeHtmlEntities } from '@/lib/utils/decodeHtmlEntities';
 
 export interface ParsedArticle {
   url: string;
@@ -50,16 +51,9 @@ function extractImageFromContent(content: string | undefined): string | null {
 
 function cleanHtml(html: string | undefined): string {
   if (!html) return '';
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .trim()
-    .slice(0, 500);
+  return decodeHtmlEntities(
+    html.replace(/<[^>]*>/g, '')
+  ).trim().slice(0, 500);
 }
 
 function parseRSSItem(item: RSSItem): ParsedArticle | null {
@@ -100,7 +94,7 @@ function parseRSSItem(item: RSSItem): ParsedArticle | null {
 
   return {
     url: typeof url === 'string' ? url : String(url),
-    title: typeof title === 'string' ? title : String(title),
+    title: decodeHtmlEntities(typeof title === 'string' ? title : String(title)),
     summary: summary || null,
     image_url: imageUrl,
     author: item['dc:creator'] || item.author || null,
@@ -148,7 +142,7 @@ function parseAtomEntry(entry: AtomEntry): ParsedArticle | null {
 
   return {
     url,
-    title,
+    title: decodeHtmlEntities(title),
     summary,
     image_url: imageUrl,
     author: entry.author?.name || null,

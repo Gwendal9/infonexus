@@ -3,6 +3,7 @@
  * Fetches a page's HTML and extracts the main article content,
  * stripping navigation, ads, and non-content elements.
  */
+import { decodeHtmlEntities } from '@/lib/utils/decodeHtmlEntities';
 
 export interface ArticleContent {
   title: string;
@@ -179,29 +180,17 @@ function cleanContent(html: string, baseUrl: string): string {
 }
 
 function htmlToPlainText(html: string): string {
-  return html
+  const stripped = html
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/<[^>]+>/g, '');
+
+  return decodeHtmlEntities(stripped)
     .replace(/\n{3,}/g, '\n\n')
-    .replace(/\s+/g, ' ')
+    .replace(/[ \t]+/g, ' ')
     .trim();
 }
 
 function decodeEntities(text: string): string {
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .trim();
+  return decodeHtmlEntities(text).trim();
 }
