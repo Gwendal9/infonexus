@@ -386,7 +386,6 @@ export default function FeedScreen() {
           onApply={setSearchFilters}
           sources={allSources}
         />
-        )}
       </View>
     );
   }

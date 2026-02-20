@@ -14,6 +14,7 @@ import { WidgetProvider } from '@/contexts/WidgetContext';
 import { TopicProvider } from '@/contexts/TopicContext';
 import { DisplayDensityProvider } from '@/contexts/DisplayDensityContext';
 import { SearchHistoryProvider } from '@/contexts/SearchHistoryContext';
+import { PaywallBypassProvider } from '@/contexts/PaywallBypassContext';
 import { Onboarding } from '@/components/Onboarding';
 import { AppErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeDatabase } from '@/lib/db';
@@ -128,6 +129,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <DisplayDensityProvider>
+        <PaywallBypassProvider>
         <SearchHistoryProvider>
           <NetworkProvider>
             <ToastProvider>
@@ -145,6 +147,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
             </ToastProvider>
           </NetworkProvider>
         </SearchHistoryProvider>
+        </PaywallBypassProvider>
       </DisplayDensityProvider>
     </ThemeProvider>
   );

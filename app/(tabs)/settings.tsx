@@ -8,6 +8,7 @@ import { useThemeContext, useColors } from '@/contexts/ThemeContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useWidgetConfig } from '@/contexts/WidgetContext';
 import { useDisplayDensity, DisplayDensity } from '@/contexts/DisplayDensityContext';
+import { usePaywallBypass } from '@/contexts/PaywallBypassContext';
 import {
   WIDGET_CATALOG,
   PRESET_CITIES,
@@ -38,6 +39,7 @@ export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const { mode, setMode } = useThemeContext();
   const { density, setDensity } = useDisplayDensity();
+  const { bypassEnabled, setBypassEnabled } = usePaywallBypass();
   const { resetOnboarding } = useOnboarding();
   const {
     config,
@@ -330,6 +332,37 @@ export default function SettingsScreen() {
               )}
             </TouchableOpacity>
           ))}
+        </View>
+      </View>
+
+      {/* Reader Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Lecture</Text>
+        <View style={styles.card}>
+          <View style={styles.option}>
+            <View style={styles.optionLeft}>
+              <View style={[styles.iconContainer, bypassEnabled && styles.iconContainerActive]}>
+                <Ionicons
+                  name="lock-open-outline"
+                  size={20}
+                  color={bypassEnabled ? colors.primary : colors.textMuted}
+                />
+              </View>
+              <View>
+                <Text style={styles.optionLabel}>Contourner les paywalls</Text>
+                <Text style={styles.optionDescription}>Tente d'accéder aux articles payants</Text>
+              </View>
+            </View>
+            <Switch
+              value={bypassEnabled}
+              onValueChange={(value) => {
+                Haptics.selectionAsync();
+                setBypassEnabled(value);
+              }}
+              trackColor={{ false: colors.border, true: colors.primary + '50' }}
+              thumbColor={bypassEnabled ? colors.primary : colors.textMuted}
+            />
+          </View>
         </View>
       </View>
 

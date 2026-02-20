@@ -23,6 +23,7 @@ import { useToggleFavorite } from '@/lib/mutations/useFavoriteMutations';
 import { extractArticleContent, ArticleContent } from '@/lib/services/articleReader';
 import { useColors } from '@/contexts/ThemeContext';
 import { useToast } from '@/contexts/ToastContext';
+import { usePaywallBypass } from '@/contexts/PaywallBypassContext';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
@@ -67,7 +68,8 @@ export default function ArticleDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = createStyles(colors, insets.top);
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
+  const { bypassEnabled } = usePaywallBypass();
 
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -106,12 +108,14 @@ export default function ArticleDetailScreen() {
     setLoadingContent(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    // Enable paywall bypass by default (TODO: add user setting)
-    const content = await extractArticleContent(article.url, true);
+    const content = await extractArticleContent(article.url, bypassEnabled);
 
     if (content) {
       setArticleContent(content);
       setReaderMode(true);
+      if (bypassEnabled && content.bypassUsed) {
+        showSuccess('Article complet récupéré');
+      }
     } else {
       showError("Impossible d'extraire le contenu. Ouverture dans le navigateur...");
       Linking.openURL(article.url);

@@ -15,6 +15,7 @@ export interface ArticleContent {
   author: string | null;
   siteName: string | null;
   estimatedReadTime: number; // minutes
+  bypassUsed?: boolean;
 }
 
 const FETCH_TIMEOUT = 15000;
@@ -46,7 +47,9 @@ export async function extractArticleContent(
       const bypassedHtml = await bypassPaywall(url);
       if (bypassedHtml) {
         console.log('[ArticleReader] ✓ Early bypass successful');
-        return extractFromHtml(bypassedHtml, url);
+        const result = extractFromHtml(bypassedHtml, url);
+        if (result) result.bypassUsed = true;
+        return result;
       }
       console.log('[ArticleReader] ✗ Early bypass failed, trying normal extraction');
     }
@@ -88,6 +91,7 @@ export async function extractArticleContent(
 
     // Generate plain text version
     let textContent = htmlToPlainText(contentHtml);
+    let bypassUsed = false;
 
     // Attempt paywall bypass if enabled and content appears truncated
     if (enablePaywallBypass && shouldAttemptBypass(html, textContent.length)) {
@@ -96,6 +100,7 @@ export async function extractArticleContent(
 
       if (bypassedHtml) {
         console.log('[ArticleReader] ✓ Bypass successful, re-extracting content');
+        bypassUsed = true;
         // Re-extract with bypassed HTML
         html = bypassedHtml;
         title = extractTitle(html) || title;
@@ -144,6 +149,7 @@ export async function extractArticleContent(
       author,
       siteName,
       estimatedReadTime,
+      bypassUsed: bypassUsed || undefined,
     };
   } catch {
     return null;
