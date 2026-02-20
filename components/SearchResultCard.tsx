@@ -2,6 +2,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AnimatedHeart } from '@/components/AnimatedHeart';
+import { HighlightedText } from '@/components/HighlightedText';
 import { ArticleWithSource } from '@/lib/queries/useArticles';
 import { useColors } from '@/contexts/ThemeContext';
 import { useDisplayDensity } from '@/contexts/DisplayDensityContext';
@@ -9,14 +10,14 @@ import { getDensityValues } from '@/lib/utils/densityValues';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-interface ArticleCardProps {
+interface SearchResultCardProps {
   article: ArticleWithSource;
   onPress: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   isRead?: boolean;
   index?: number;
-  onLongPress?: () => void;
+  searchQuery: string;
 }
 
 function formatRelativeDate(dateString: string | null): string {
@@ -39,13 +40,20 @@ function formatRelativeDate(dateString: string | null): string {
 
 function estimateReadTime(title: string, summary: string | null): string {
   const words = (title + ' ' + (summary || '')).split(/\s+/).length;
-  // Articles have full content beyond summary, estimate ~3x the visible text
   const estimatedTotal = words * 3;
   const minutes = Math.max(1, Math.round(estimatedTotal / 200));
   return `${minutes} min`;
 }
 
-export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, isRead, index = 0, onLongPress }: ArticleCardProps) {
+export function SearchResultCard({
+  article,
+  onPress,
+  isFavorite,
+  onToggleFavorite,
+  isRead,
+  index = 0,
+  searchQuery,
+}: SearchResultCardProps) {
   const colors = useColors();
   const { density } = useDisplayDensity();
   const densityValues = getDensityValues(density);
@@ -60,11 +68,9 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, is
   return (
     <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
       <TouchableOpacity
-        testID="article-card"
+        testID="search-result-card"
         style={[styles.card, isRead && styles.cardRead]}
         onPress={handlePress}
-        onLongPress={onLongPress}
-        delayLongPress={400}
         activeOpacity={0.8}
       >
         {hasImage ? (
@@ -92,14 +98,20 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, is
                 <Text style={styles.date}>{formatRelativeDate(article.published_at)}</Text>
               </View>
 
-              <Text style={[styles.title, isRead && styles.titleRead]} numberOfLines={densityValues.titleLines}>
-                {article.title}
-              </Text>
+              <HighlightedText
+                text={article.title}
+                highlight={searchQuery}
+                style={[styles.title, isRead && styles.titleRead]}
+                numberOfLines={densityValues.titleLines}
+              />
 
               {article.summary && (
-                <Text style={[styles.summary, isRead && styles.textRead]} numberOfLines={densityValues.summaryLines}>
-                  {article.summary}
-                </Text>
+                <HighlightedText
+                  text={article.summary}
+                  highlight={searchQuery}
+                  style={[styles.summary, isRead && styles.textRead]}
+                  numberOfLines={densityValues.summaryLines}
+                />
               )}
 
               <Text style={styles.readTime}>
@@ -120,14 +132,20 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, is
                 <Text style={styles.date}>{formatRelativeDate(article.published_at)}</Text>
               </View>
 
-              <Text style={[styles.title, isRead && styles.titleRead]} numberOfLines={densityValues.titleLines}>
-                {article.title}
-              </Text>
+              <HighlightedText
+                text={article.title}
+                highlight={searchQuery}
+                style={[styles.title, isRead && styles.titleRead]}
+                numberOfLines={densityValues.titleLines}
+              />
 
               {article.summary && (
-                <Text style={[styles.summary, isRead && styles.textRead]} numberOfLines={densityValues.summaryLines}>
-                  {article.summary}
-                </Text>
+                <HighlightedText
+                  text={article.summary}
+                  highlight={searchQuery}
+                  style={[styles.summary, isRead && styles.textRead]}
+                  numberOfLines={densityValues.summaryLines}
+                />
               )}
 
               <View style={styles.footer}>
@@ -170,7 +188,6 @@ const createStyles = (colors: ReturnType<typeof useColors>, densityValues: Retur
       shadowOpacity: 0.04,
       elevation: 2,
     },
-    // --- Image layout ---
     imageContainer: {
       position: 'relative',
     },
@@ -190,7 +207,6 @@ const createStyles = (colors: ReturnType<typeof useColors>, densityValues: Retur
       padding: densityValues.cardPadding,
       gap: spacing.xs,
     },
-    // --- No-image layout ---
     noImageLayout: {
       flexDirection: 'row',
     },
@@ -204,7 +220,6 @@ const createStyles = (colors: ReturnType<typeof useColors>, densityValues: Retur
       padding: densityValues.cardPadding,
       gap: spacing.xs,
     },
-    // --- Shared ---
     metaRow: {
       flexDirection: 'row',
       alignItems: 'center',

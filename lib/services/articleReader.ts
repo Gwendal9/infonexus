@@ -4,6 +4,9 @@
  * stripping navigation, ads, and non-content elements.
  */
 import { decodeHtmlEntities } from '@/lib/utils/decodeHtmlEntities';
+import { cleanArticleContent } from '@/lib/utils/contentCleaner';
+import { bypassPaywall, shouldAttemptBypass } from '@/lib/services/paywallBypass';
+import { getSiteExtractor, extractWithSitePattern, siteRequiresBypass } from '@/lib/services/siteSpecificExtractors';
 
 export interface ArticleContent {
   title: string;
@@ -29,29 +32,109 @@ const REMOVE_CLASS_PATTERNS = [
   /\bcookie/i, /\bbanner/i,
 ];
 
-export async function extractArticleContent(url: string): Promise<ArticleContent | null> {
+export async function extractArticleContent(
+  url: string,
+  enablePaywallBypass: boolean = false
+): Promise<ArticleContent | null> {
   try {
-    const html = await fetchPage(url);
-    if (!html) return null;
+    console.log(`[ArticleReader] Extracting content from: ${url}`);
 
-    const title = extractTitle(html);
-    const author = extractMeta(html, 'author') || extractMeta(html, 'article:author');
-    const siteName = extractMeta(html, 'og:site_name');
+    // Check if this site requires bypass
+    const siteNeedsBypass = siteRequiresBypass(url);
+    if (siteNeedsBypass && enablePaywallBypass) {
+      console.log('[ArticleReader] Site known to require paywall bypass, attempting early...');
+      const bypassedHtml = await bypassPaywall(url);
+      if (bypassedHtml) {
+        console.log('[ArticleReader] ✓ Early bypass successful');
+        return extractFromHtml(bypassedHtml, url);
+      }
+      console.log('[ArticleReader] ✗ Early bypass failed, trying normal extraction');
+    }
 
-    // Extract main content area
-    let contentHtml = extractMainContent(html);
-    if (!contentHtml) return null;
+    let html = await fetchPage(url);
+    if (!html) {
+      console.log('[ArticleReader] ✗ Failed to fetch page');
+      return null;
+    }
+
+    let title = extractTitle(html);
+    let author = extractMeta(html, 'author') || extractMeta(html, 'article:author');
+    let siteName = extractMeta(html, 'og:site_name');
+
+    // Try site-specific extraction first
+    const siteExtractor = getSiteExtractor(url);
+    let contentHtml: string | null = null;
+
+    if (siteExtractor) {
+      contentHtml = extractWithSitePattern(html, siteExtractor);
+    }
+
+    // Fallback to generic extraction
+    if (!contentHtml) {
+      console.log('[ArticleReader] Falling back to generic extraction');
+      contentHtml = extractMainContent(html);
+    }
+
+    if (!contentHtml) {
+      console.log('[ArticleReader] ✗ No content extracted');
+      return null;
+    }
 
     // Clean the extracted content
     contentHtml = cleanContent(contentHtml, url);
 
+    // Apply additional content cleaning (paywall, social, etc.)
+    contentHtml = cleanArticleContent(contentHtml);
+
     // Generate plain text version
-    const textContent = htmlToPlainText(contentHtml);
+    let textContent = htmlToPlainText(contentHtml);
 
-    // Skip if too little content was extracted
-    if (textContent.length < 100) return null;
+    // Attempt paywall bypass if enabled and content appears truncated
+    if (enablePaywallBypass && shouldAttemptBypass(html, textContent.length)) {
+      console.log('[ArticleReader] Content appears paywalled, attempting bypass...');
+      const bypassedHtml = await bypassPaywall(url);
 
-    const wordCount = textContent.split(/\s+/).length;
+      if (bypassedHtml) {
+        console.log('[ArticleReader] ✓ Bypass successful, re-extracting content');
+        // Re-extract with bypassed HTML
+        html = bypassedHtml;
+        title = extractTitle(html) || title;
+        author = extractMeta(html, 'author') || extractMeta(html, 'article:author') || author;
+        siteName = extractMeta(html, 'og:site_name') || siteName;
+
+        contentHtml = extractMainContent(html);
+        if (contentHtml) {
+          contentHtml = cleanContent(contentHtml, url);
+          contentHtml = cleanArticleContent(contentHtml);
+          textContent = htmlToPlainText(contentHtml);
+        }
+      } else {
+        console.log('[ArticleReader] ✗ Bypass failed, using original content');
+      }
+    }
+
+    // Skip if too little content was extracted (even after bypass attempt)
+    // Use word count instead of character count for better accuracy
+    const words = textContent.split(/\s+/).filter(w => w.length > 0);
+    const wordCount = words.length;
+    const MIN_WORD_COUNT = 20; // ~2-3 phrases minimum
+
+    if (wordCount < MIN_WORD_COUNT) {
+      console.log(`[ArticleReader] Content too short: ${wordCount} words (minimum: ${MIN_WORD_COUNT})`);
+
+      // Check if this is an error page
+      const errorMarkers = ['404', 'not found', 'page introuvable', 'erreur', 'error'];
+      const isErrorPage = errorMarkers.some(marker =>
+        textContent.toLowerCase().includes(marker.toLowerCase())
+      );
+
+      if (isErrorPage) {
+        console.log('[ArticleReader] Error page detected');
+      }
+
+      return null;
+    }
+
     const estimatedReadTime = Math.max(1, Math.ceil(wordCount / 200));
 
     return {
@@ -115,29 +198,108 @@ function extractMeta(html: string, name: string): string | null {
   return null;
 }
 
+interface ContentCandidate {
+  content: string;
+  score: number;
+  patternName: string;
+}
+
 function extractMainContent(html: string): string | null {
-  // Try these selectors in priority order
-  const patterns = [
-    /<article[^>]*>([\s\S]*?)<\/article>/i,
-    /<main[^>]*>([\s\S]*?)<\/main>/i,
-    /<div[^>]+role=["']main["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]+class=["'][^"']*(?:article[-_]?body|article[-_]?content|post[-_]?content|entry[-_]?content|story[-_]?body)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+  const patterns: Array<{ pattern: RegExp; score: number; name: string }> = [
+    // Highest priority: HTML5 semantic tags
+    {
+      pattern: /<article[^>]*>([\s\S]*?)<\/article>/i,
+      score: 10,
+      name: 'article tag',
+    },
+    {
+      pattern: /<main[^>]*>([\s\S]*?)<\/main>/i,
+      score: 9,
+      name: 'main tag',
+    },
+
+    // High priority: role attribute
+    {
+      pattern: /<div[^>]+role=["'](?:main|article)["'][^>]*>([\s\S]*?)<\/div>/i,
+      score: 8,
+      name: 'role attribute',
+    },
+
+    // Selectors by ID (often very specific)
+    {
+      pattern: /<div[^>]+id=["'](?:article|main|content|story|post|entry)(?:[-_](?:body|content|text|wrapper|container))?["'][^>]*>([\s\S]*?)<\/div>/i,
+      score: 7,
+      name: 'id attribute',
+    },
+
+    // Selectors by class (common patterns)
+    {
+      pattern: /<div[^>]+class=["'][^"']*(?:article|post|entry|story)[-_]?(?:body|content|text|main)?[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      score: 6,
+      name: 'class attribute (article)',
+    },
+    {
+      pattern: /<div[^>]+class=["'][^"']*(?:content)[-_]?(?:main|primary|body)?[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      score: 5,
+      name: 'class attribute (content)',
+    },
+
+    // Section with specific selectors
+    {
+      pattern: /<section[^>]+(?:class|id)=["'][^"']*(?:article|content|main|post)[^"']*["'][^>]*>([\s\S]*?)<\/section>/i,
+      score: 4,
+      name: 'section tag',
+    },
   ];
 
-  for (const pattern of patterns) {
+  const candidates: ContentCandidate[] = [];
+
+  // Test all patterns and collect candidates
+  for (const { pattern, score, name } of patterns) {
     const match = html.match(pattern);
-    if (match && match[1].length > 200) {
-      return match[1];
+    if (match && match[1]) {
+      const content = match[1];
+      const textContent = stripHtmlTags(content);
+      const wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
+
+      // Ignore candidates that are too short (less than 50 words)
+      if (wordCount < 50) continue;
+
+      candidates.push({
+        content,
+        score: score + Math.log10(wordCount) * 2, // Bonus for word count
+        patternName: name,
+      });
     }
   }
 
-  // Fallback: try the largest text-heavy div
+  // Sort by score (descending)
+  candidates.sort((a, b) => b.score - a.score);
+
+  if (candidates.length > 0) {
+    console.log(`[ArticleReader] Best match: ${candidates[0].patternName} (score: ${candidates[0].score.toFixed(2)})`);
+    return candidates[0].content;
+  }
+
+  // Fallback: find the largest text block in <body>
+  console.log('[ArticleReader] No pattern matched, using fallback');
   const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   if (bodyMatch) {
-    return bodyMatch[1];
+    // Try to remove obvious navigation elements
+    let cleaned = bodyMatch[1];
+    cleaned = cleaned.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
+    cleaned = cleaned.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
+    cleaned = cleaned.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+    cleaned = cleaned.replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '');
+    return cleaned;
   }
 
   return null;
+}
+
+// Utility function to extract plain text
+function stripHtmlTags(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function cleanContent(html: string, baseUrl: string): string {
@@ -193,4 +355,56 @@ function htmlToPlainText(html: string): string {
 
 function decodeEntities(text: string): string {
   return decodeHtmlEntities(text).trim();
+}
+
+/**
+ * Extract article from HTML (helper function for reuse)
+ */
+function extractFromHtml(html: string, url: string): ArticleContent | null {
+  const title = extractTitle(html);
+  const author = extractMeta(html, 'author') || extractMeta(html, 'article:author');
+  const siteName = extractMeta(html, 'og:site_name');
+
+  // Try site-specific extraction first
+  const siteExtractor = getSiteExtractor(url);
+  let contentHtml: string | null = null;
+
+  if (siteExtractor) {
+    contentHtml = extractWithSitePattern(html, siteExtractor);
+  }
+
+  // Fallback to generic extraction
+  if (!contentHtml) {
+    contentHtml = extractMainContent(html);
+  }
+
+  if (!contentHtml) return null;
+
+  // Clean the extracted content
+  contentHtml = cleanContent(contentHtml, url);
+  contentHtml = cleanArticleContent(contentHtml);
+
+  // Generate plain text version
+  const textContent = htmlToPlainText(contentHtml);
+
+  // Check word count
+  const words = textContent.split(/\s+/).filter(w => w.length > 0);
+  const wordCount = words.length;
+  const MIN_WORD_COUNT = 20;
+
+  if (wordCount < MIN_WORD_COUNT) {
+    console.log(`[ArticleReader] Content too short: ${wordCount} words`);
+    return null;
+  }
+
+  const estimatedReadTime = Math.max(1, Math.ceil(wordCount / 200));
+
+  return {
+    title: title || 'Article',
+    content: contentHtml,
+    textContent,
+    author,
+    siteName,
+    estimatedReadTime,
+  };
 }

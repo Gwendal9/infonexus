@@ -1,31 +1,35 @@
-import { useCallback, useMemo, useState, useRef } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import { ScrollToTopButton, useScrollToTop } from '@/components/ScrollToTopButton';
-import PagerView from 'react-native-pager-view';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ArticleCard } from '@/components/ArticleCard';
 import { SwipeableArticleCard } from '@/components/SwipeableArticleCard';
+import { SearchResultCard } from '@/components/SearchResultCard';
 import { ArticleCardSkeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/Button';
 import { TopicArticleList } from '@/components/TopicArticleList';
 import { AddTopicModal } from '@/components/AddTopicModal';
+import { GroupedArticleList } from '@/components/GroupedArticleList';
+import { SearchFiltersModal, SearchFilters } from '@/components/SearchFilters';
+import { SearchHistory } from '@/components/SearchHistory';
+import { TwoLevelNavigation } from '@/components/TwoLevelNavigation';
 import { useArticles, ArticleWithSource } from '@/lib/queries/useArticles';
+import { MainTab } from '@/types/database';
 import { useSearchArticles } from '@/lib/queries/useSearchArticles';
+import { useSearchHistory } from '@/contexts/SearchHistoryContext';
 import { useFavoriteIds } from '@/lib/queries/useFavorites';
 import { useThemes } from '@/lib/queries/useThemes';
 import { useAllSourceThemes } from '@/lib/queries/useSourceThemes';
@@ -41,28 +45,51 @@ import { Topic } from '@/lib/topics/types';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-type FeedTab = { id: string | null; name: string; color: string; type: 'all' | 'theme' | 'topic' };
-
 export default function FeedScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { width } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(0);
+
+  // New 2-level navigation state
+  const [mainTab, setMainTab] = useState<MainTab>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
   const [topicModalVisible, setTopicModalVisible] = useState(false);
   const [editingTopic, setEditingTopic] = useState<Topic | undefined>();
-  const pagerRef = useRef<PagerView>(null);
-  const tabsScrollRef = useRef<ScrollView>(null);
+  const [filtersModalVisible, setFiltersModalVisible] = useState(false);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+    dateRange: 'all',
+    readStatus: 'all',
+    favoriteOnly: false,
+    sourceIds: [],
+  });
 
   const styles = createStyles(colors);
 
   const { config: topicConfig, addTopic, updateTopic, deleteTopic } = useTopics();
+  const { history, addSearch } = useSearchHistory();
 
   const { data: articles, isLoading, refetch, isRefetching } = useArticles();
   const { data: favoriteIds } = useFavoriteIds();
   const { data: readArticleIds } = useReadArticleIds();
   const { data: themes } = useThemes();
   const { data: sourceThemes } = useAllSourceThemes();
+
+  // Get all sources for filter modal
+  const allSources = useMemo(() => {
+    if (!articles) return [];
+    const sourcesMap = new Map<string, { id: string; name: string }>();
+    articles.forEach((article) => {
+      if (article.source && !sourcesMap.has(article.source_id)) {
+        sourcesMap.set(article.source_id, {
+          id: article.source_id,
+          name: article.source.name,
+        });
+      }
+    });
+    return Array.from(sourcesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [articles]);
   const refreshSources = useRefreshSources();
   const toggleFavorite = useToggleFavorite();
   const markAsRead = useMarkAsRead();
@@ -76,6 +103,80 @@ export default function FeedScreen() {
     isSearching
   );
 
+  // Track last search query to avoid duplicate additions
+  const lastSearchQueryRef = useRef<string>('');
+  const previousIsSearchLoadingRef = useRef(false);
+
+  // Add search to history when search completes (loading goes from true to false)
+  useEffect(() => {
+    const trimmedQuery = searchQuery.trim();
+    const searchJustCompleted = previousIsSearchLoadingRef.current && !isSearchLoading;
+
+    // Update ref for next render
+    previousIsSearchLoadingRef.current = isSearchLoading;
+
+    // Only add when search just completed successfully
+    if (searchJustCompleted && isSearching && trimmedQuery !== lastSearchQueryRef.current) {
+      // Check if we have results (access searchResults directly, not as dependency)
+      if (searchResults && searchResults.length > 0) {
+        lastSearchQueryRef.current = trimmedQuery;
+        addSearch(trimmedQuery);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSearching, isSearchLoading, searchQuery, addSearch]);
+
+  // Apply filters to search results
+  const filteredSearchResults = useMemo(() => {
+    if (!searchResults) return [];
+
+    let filtered = [...searchResults];
+
+    // Date range filter
+    if (searchFilters.dateRange !== 'all') {
+      const now = Date.now();
+      const ranges = {
+        today: 24 * 60 * 60 * 1000,
+        week: 7 * 24 * 60 * 60 * 1000,
+        month: 30 * 24 * 60 * 60 * 1000,
+      };
+      const maxAge = ranges[searchFilters.dateRange];
+      filtered = filtered.filter((article) => {
+        if (!article.published_at) return false;
+        const age = now - new Date(article.published_at).getTime();
+        return age <= maxAge;
+      });
+    }
+
+    // Read status filter
+    if (searchFilters.readStatus !== 'all' && readArticleIds) {
+      filtered = filtered.filter((article) => {
+        const isRead = readArticleIds.has(article.id);
+        return searchFilters.readStatus === 'read' ? isRead : !isRead;
+      });
+    }
+
+    // Favorite filter
+    if (searchFilters.favoriteOnly && favoriteIds) {
+      filtered = filtered.filter((article) => favoriteIds.has(article.id));
+    }
+
+    // Source filter
+    if (searchFilters.sourceIds.length > 0) {
+      filtered = filtered.filter((article) =>
+        searchFilters.sourceIds.includes(article.source_id)
+      );
+    }
+
+    return filtered;
+  }, [searchResults, searchFilters, readArticleIds, favoriteIds]);
+
+  const hasActiveFilters =
+    searchFilters.dateRange !== 'all' ||
+    searchFilters.readStatus !== 'all' ||
+    searchFilters.favoriteOnly ||
+    searchFilters.sourceIds.length > 0;
+
   // Auto-refresh sources when app becomes active
   useAutoRefresh({
     enabled: true,
@@ -85,18 +186,6 @@ export default function FeedScreen() {
       }
     },
   });
-
-  // Build tabs: "Tous" + themes + topics
-  const allTabs = useMemo(() => {
-    const tabs: FeedTab[] = [
-      { id: null, name: 'Tous', color: colors.primary, type: 'all' },
-    ];
-    if (themes) {
-      themes.forEach((t) => tabs.push({ id: t.id, name: t.name, color: t.color, type: 'theme' }));
-    }
-    topicConfig.topics.forEach((t) => tabs.push({ id: t.id, name: t.name, color: t.color, type: 'topic' }));
-    return tabs;
-  }, [themes, colors.primary, topicConfig.topics]);
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -135,23 +224,6 @@ export default function FeedScreen() {
     },
     [favoriteIds, toggleFavorite]
   );
-
-  const handleTabPress = useCallback((index: number) => {
-    Haptics.selectionAsync();
-    pagerRef.current?.setPage(index);
-    setCurrentPage(index);
-  }, []);
-
-  const handlePageSelected = useCallback((e: { nativeEvent: { position: number } }) => {
-    const position = e.nativeEvent.position;
-    setCurrentPage(position);
-    Haptics.selectionAsync();
-
-    // Scroll tabs to show selected tab
-    const tabWidth = 80;
-    const scrollX = Math.max(0, position * tabWidth - width / 2 + tabWidth / 2);
-    tabsScrollRef.current?.scrollTo({ x: scrollX, animated: true });
-  }, [width]);
 
   // Get articles for a specific theme
   const getArticlesForTheme = useCallback((themeId: string | null) => {
@@ -197,6 +269,34 @@ export default function FeedScreen() {
     );
   }
 
+  // When user is typing in search (but hasn't reached 2 chars), show history
+  const isTypingSearch = searchQuery.length > 0 && searchQuery.length < 2;
+  if (isTypingSearch) {
+    return (
+      <View style={styles.container}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={20} color={colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchAction}>
+              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <SearchHistory onSelectQuery={setSearchQuery} />
+      </View>
+    );
+  }
+
   // When searching, show search results without pager
   if (isSearching) {
     return (
@@ -212,8 +312,24 @@ export default function FeedScreen() {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchAction}>
+                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setFiltersModalVisible(true);
+              }}
+              style={styles.filterButton}
+            >
+              <Ionicons
+                name={hasActiveFilters ? 'options' : 'options-outline'}
+                size={22}
+                color={hasActiveFilters ? colors.primary : colors.textMuted}
+              />
+              {hasActiveFilters && <View style={styles.filterBadge} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -221,7 +337,8 @@ export default function FeedScreen() {
         <View style={styles.searchResultsBanner}>
           <Ionicons name="search" size={16} color={colors.primary} />
           <Text style={styles.searchResultsText}>
-            {isSearchLoading ? 'Recherche...' : `${searchResults?.length ?? 0} résultat${(searchResults?.length ?? 0) !== 1 ? 's' : ''}`}
+            {isSearchLoading ? 'Recherche...' : `${filteredSearchResults.length} résultat${filteredSearchResults.length !== 1 ? 's' : ''}`}
+            {hasActiveFilters && ' (filtrés)'}
           </Text>
           <TouchableOpacity onPress={() => setSearchQuery('')}>
             <Text style={styles.clearSearch}>Effacer</Text>
@@ -234,17 +351,17 @@ export default function FeedScreen() {
           </View>
         ) : (
           <FlatList
-            data={searchResults ?? []}
+            data={filteredSearchResults}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => (
-              <SwipeableArticleCard
+              <SearchResultCard
                 article={item as unknown as ArticleWithSource}
                 onPress={() => handleArticlePress(item as unknown as ArticleWithSource)}
                 isFavorite={favoriteIds?.has(item.id)}
                 onToggleFavorite={() => handleToggleFavorite(item.id)}
-                onMarkAsRead={() => markAsRead.mutate(item.id)}
                 isRead={readArticleIds?.has(item.id)}
                 index={index}
+                searchQuery={searchQuery}
               />
             )}
             contentContainerStyle={styles.list}
@@ -252,10 +369,23 @@ export default function FeedScreen() {
               <EmptyState
                 icon="search-outline"
                 title="Aucun résultat"
-                description={`Aucun article trouvé pour "${searchQuery}"`}
+                description={
+                  hasActiveFilters
+                    ? 'Aucun article ne correspond aux filtres'
+                    : `Aucun article trouvé pour "${searchQuery}"`
+                }
               />
             }
           />
+        )}
+
+        <SearchFiltersModal
+          visible={filtersModalVisible}
+          onClose={() => setFiltersModalVisible(false)}
+          filters={searchFilters}
+          onApply={setSearchFilters}
+          sources={allSources}
+        />
         )}
       </View>
     );
@@ -277,116 +407,78 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* Tabs: Tous + themes + topics */}
-      {(allTabs.length > 1 || topicConfig.topics.length > 0) && (
-        <View style={styles.tabsContainer}>
-          <ScrollView
-            ref={tabsScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContent}
-          >
-            {allTabs.map((tab, index) => {
-              const isSelected = index === currentPage;
-              const tabKey = tab.type === 'topic' ? `topic-${tab.id}` : tab.type === 'theme' ? `theme-${tab.id}` : 'all';
-              const unread = tab.type !== 'topic' ? (unreadCounts.get(tab.id) ?? 0) : 0;
-              return (
-                <TouchableOpacity
-                  key={tabKey}
-                  style={styles.tab}
-                  onPress={() => handleTabPress(index)}
-                  onLongPress={tab.type === 'topic' ? () => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    const t = topicConfig.topics.find((tp) => tp.id === tab.id);
-                    if (t) {
-                      setEditingTopic(t);
-                      setTopicModalVisible(true);
-                    }
-                  } : undefined}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabLabelRow}>
-                    <Text
-                      style={[
-                        styles.tabText,
-                        isSelected && styles.tabTextActive,
-                        isSelected && tab.id && { color: tab.color },
-                      ]}
-                    >
-                      {tab.name}
-                    </Text>
-                    {unread > 0 && !isSelected && (
-                      <View style={[styles.unreadBadge, { backgroundColor: tab.id ? tab.color : colors.primary }]}>
-                        <Text style={styles.unreadBadgeText}>
-                          {unread > 99 ? '99+' : unread}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  {isSelected && (
-                    <View
-                      style={[
-                        styles.tabIndicator,
-                        { backgroundColor: tab.id ? tab.color : colors.primary },
-                      ]}
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+      {/* Two-Level Navigation */}
+      <TwoLevelNavigation
+        mainTab={mainTab}
+        onMainTabChange={setMainTab}
+        categories={themes || []}
+        topics={topicConfig.topics}
+        selectedCategory={selectedCategory}
+        selectedTopic={selectedTopic}
+        onCategorySelect={setSelectedCategory}
+        onTopicSelect={setSelectedTopic}
+        onAddCategory={() => router.push('/(tabs)/sources')}
+        onAddTopic={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setEditingTopic(undefined);
+          setTopicModalVisible(true);
+        }}
+        unreadCounts={unreadCounts}
+      />
 
-            {/* Add topic button */}
-            <TouchableOpacity
-              style={styles.addTopicTab}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setEditingTopic(undefined);
-                setTopicModalVisible(true);
-              }}
-            >
-              <Ionicons name="add-circle-outline" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          </ScrollView>
-
-          {/* Swipe hint */}
-          <View style={styles.swipeHint}>
-            <Ionicons name="swap-horizontal" size={14} color={colors.textMuted} />
-          </View>
-        </View>
+      {/* Conditional rendering based on mainTab */}
+      {mainTab === 'all' && (
+        <ThemeArticleList
+          themeId={null}
+          articles={articles || []}
+          favoriteIds={favoriteIds}
+          readArticleIds={readArticleIds}
+          isRefreshing={isRefreshing}
+          isPending={refreshSources.isPending}
+          onRefresh={handleRefresh}
+          onArticlePress={handleArticlePress}
+          onToggleFavorite={handleToggleFavorite}
+          onMarkAsRead={(id: string) => markAsRead.mutate(id)}
+          colors={colors}
+        />
       )}
 
-      {/* Pager View */}
-      <PagerView
-        ref={pagerRef}
-        style={styles.pager}
-        initialPage={0}
-        onPageSelected={handlePageSelected}
-      >
-        {allTabs.map((tab) => {
-          const tabKey = tab.type === 'topic' ? `topic-${tab.id}` : tab.type === 'theme' ? `theme-${tab.id}` : 'all';
-          return (
-            <View key={tabKey} style={styles.page}>
-              {tab.type === 'topic' && tab.id ? (
-                <TopicArticleList topicId={tab.id} />
-              ) : (
-                <ThemeArticleList
-                  themeId={tab.id}
-                  articles={getArticlesForTheme(tab.id)}
-                  favoriteIds={favoriteIds}
-                  readArticleIds={readArticleIds}
-                  isRefreshing={isRefreshing}
-                  isPending={refreshSources.isPending}
-                  onRefresh={handleRefresh}
-                  onArticlePress={handleArticlePress}
-                  onToggleFavorite={handleToggleFavorite}
-                  onMarkAsRead={(id: string) => markAsRead.mutate(id)}
-                  colors={colors}
-                />
-              )}
-            </View>
-          );
-        })}
-      </PagerView>
+      {mainTab === 'categories' && (
+        <ThemeArticleList
+          themeId={selectedCategory}
+          articles={getArticlesForTheme(selectedCategory)}
+          favoriteIds={favoriteIds}
+          readArticleIds={readArticleIds}
+          isRefreshing={isRefreshing}
+          isPending={refreshSources.isPending}
+          onRefresh={handleRefresh}
+          onArticlePress={handleArticlePress}
+          onToggleFavorite={handleToggleFavorite}
+          onMarkAsRead={(id: string) => markAsRead.mutate(id)}
+          colors={colors}
+        />
+      )}
+
+      {mainTab === 'topics' && selectedTopic && (
+        <TopicArticleList topicId={selectedTopic} />
+      )}
+
+      {mainTab === 'topics' && !selectedTopic && (
+        <EmptyState
+          icon="bookmark-outline"
+          title="Sélectionnez un sujet"
+          description="Choisissez un sujet de veille ou créez-en un nouveau"
+        >
+          <Button
+            title="Créer un sujet"
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setEditingTopic(undefined);
+              setTopicModalVisible(true);
+            }}
+          />
+        </EmptyState>
+      )}
 
       <AddTopicModal
         visible={topicModalVisible}
@@ -432,26 +524,20 @@ function ThemeArticleList({
   colors,
 }: ThemeArticleListProps) {
   const styles = createStyles(colors);
-  const listRef = useRef<FlatList>(null);
+  const listRef = useRef<any>(null);
   const { showButton, onScroll } = useScrollToTop();
 
   return (
     <View style={{ flex: 1 }}>
-      <FlatList
+      <GroupedArticleList
         ref={listRef}
-        data={articles}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <SwipeableArticleCard
-            article={item}
-            onPress={() => onArticlePress(item)}
-            isFavorite={favoriteIds?.has(item.id)}
-            onToggleFavorite={() => onToggleFavorite(item.id)}
-            onMarkAsRead={() => onMarkAsRead(item.id)}
-            isRead={readArticleIds?.has(item.id)}
-            index={index}
-          />
-        )}
+        articles={articles}
+        favoriteIds={favoriteIds}
+        readArticleIds={readArticleIds}
+        onArticlePress={onArticlePress}
+        onToggleFavorite={onToggleFavorite}
+        onMarkAsRead={onMarkAsRead}
+        onScroll={onScroll}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -459,6 +545,14 @@ function ThemeArticleList({
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
+        }
+        ListHeaderComponent={
+          isPending ? (
+            <Animated.View entering={FadeIn} style={styles.refreshBanner}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.refreshText}>Récupération des articles...</Text>
+            </Animated.View>
+          ) : null
         }
         ListEmptyComponent={
           <EmptyState
@@ -479,21 +573,10 @@ function ThemeArticleList({
             )}
           </EmptyState>
         }
-        contentContainerStyle={articles.length === 0 ? styles.emptyList : styles.list}
-        ListHeaderComponent={
-          isPending ? (
-            <Animated.View entering={FadeIn} style={styles.refreshBanner}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.refreshText}>Récupération des articles...</Text>
-            </Animated.View>
-          ) : null
-        }
-        onScroll={onScroll}
-        scrollEventThrottle={100}
       />
       <ScrollToTopButton
         visible={showButton}
-        onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
+        onPress={() => listRef.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, animated: true })}
       />
     </View>
   );
@@ -528,69 +611,22 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       color: colors.textPrimary,
       padding: 0,
     },
-    tabsContainer: {
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      flexDirection: 'row',
-      alignItems: 'center',
+    searchAction: {
+      padding: spacing.xs,
     },
-    tabsContent: {
-      paddingHorizontal: spacing.sm,
-    },
-    tab: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
+    filterButton: {
+      padding: spacing.xs,
+      marginLeft: spacing.xs,
       position: 'relative',
     },
-    tabLabelRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    tabText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    tabTextActive: {
-      color: colors.primary,
-    },
-    unreadBadge: {
-      minWidth: 18,
-      height: 18,
-      borderRadius: 9,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 5,
-    },
-    unreadBadgeText: {
-      color: '#FFFFFF',
-      fontSize: 10,
-      fontWeight: '700',
-    },
-    tabIndicator: {
+    filterBadge: {
       position: 'absolute',
-      bottom: 0,
-      left: spacing.lg,
-      right: spacing.lg,
-      height: 3,
-      borderRadius: 1.5,
-    },
-    addTopicTab: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.sm,
-      justifyContent: 'center',
-    },
-    swipeHint: {
-      paddingRight: spacing.md,
-      opacity: 0.5,
-    },
-    pager: {
-      flex: 1,
-    },
-    page: {
-      flex: 1,
+      top: 4,
+      right: 4,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.primary,
     },
     list: {
       padding: spacing.md,

@@ -106,7 +106,8 @@ export default function ArticleDetailScreen() {
     setLoadingContent(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const content = await extractArticleContent(article.url);
+    // Enable paywall bypass by default (TODO: add user setting)
+    const content = await extractArticleContent(article.url, true);
 
     if (content) {
       setArticleContent(content);

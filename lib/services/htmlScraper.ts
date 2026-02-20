@@ -77,11 +77,8 @@ function extractArticleFromHTML(html: string, url: string): ParsedArticle | null
 
   if (!title) return null;
 
-  // Extract description/summary
-  const summary = extractMetaContent(html, 'og:description') ||
-    extractMetaContent(html, 'twitter:description') ||
-    extractMetaContent(html, 'description') ||
-    null;
+  // Extract description/summary with fallback to first paragraph
+  const summary = extractSummary(html);
 
   // Extract image
   const imageUrl = extractMetaContent(html, 'og:image') ||
@@ -104,7 +101,7 @@ function extractArticleFromHTML(html: string, url: string): ParsedArticle | null
   return {
     url,
     title: cleanText(title),
-    summary: summary ? cleanText(summary).slice(0, 500) : null,
+    summary: summary, // Already cleaned and truncated by extractSummary
     image_url: imageUrl ? resolveUrl(imageUrl, url) : null,
     author: author ? cleanText(author) : null,
     published_at: publishedAt ? parseDate(publishedAt) : null,
@@ -253,6 +250,70 @@ function cleanText(text: string): string {
   return decodeHtmlEntities(text)
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Truncate text intelligently at word boundaries
+ */
+function truncateSummary(text: string, maxLength: number = 500): string {
+  if (text.length <= maxLength) return text;
+
+  // Find the last space before maxLength
+  const truncated = text.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+
+  // If we find a space in the last 80%, cut there
+  if (lastSpace > maxLength * 0.8) {
+    return truncated.slice(0, lastSpace).trim() + '...';
+  }
+
+  // Otherwise, look for the last punctuation mark
+  const lastPunct = Math.max(
+    truncated.lastIndexOf('.'),
+    truncated.lastIndexOf(','),
+    truncated.lastIndexOf(';')
+  );
+
+  if (lastPunct > maxLength * 0.6) {
+    return truncated.slice(0, lastPunct + 1).trim();
+  }
+
+  // Last resort: cut at maxLength with ellipsis
+  return truncated.trim() + '...';
+}
+
+/**
+ * Extract summary with fallback to first paragraph
+ */
+function extractSummary(html: string): string | null {
+  // 1. Try meta tags first (priority)
+  const metaSummary =
+    extractMetaContent(html, 'og:description') ||
+    extractMetaContent(html, 'twitter:description') ||
+    extractMetaContent(html, 'description');
+
+  if (metaSummary) {
+    return truncateSummary(cleanText(metaSummary));
+  }
+
+  // 2. Fallback: extract first paragraph from main content
+  const articleMatch = html.match(/<(?:article|main)[^>]*>([\s\S]*?)<\/(?:article|main)>/i);
+  const searchArea = articleMatch ? articleMatch[1] : html;
+
+  // Look for paragraphs
+  const paragraphs = searchArea.match(/<p[^>]*>([^<]+(?:<[^/][^>]*>[^<]*<\/[^>]+>)*[^<]+)<\/p>/gi);
+
+  if (paragraphs) {
+    for (const p of paragraphs) {
+      const text = p.replace(/<[^>]+>/g, '').trim();
+      // Take the first paragraph with at least 50 characters
+      if (text.length >= 50) {
+        return truncateSummary(cleanText(text), 300);
+      }
+    }
+  }
+
+  return null;
 }
 
 function parseDate(dateStr: string): string | null {

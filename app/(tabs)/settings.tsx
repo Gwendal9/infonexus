@@ -7,6 +7,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useThemeContext, useColors } from '@/contexts/ThemeContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useWidgetConfig } from '@/contexts/WidgetContext';
+import { useDisplayDensity, DisplayDensity } from '@/contexts/DisplayDensityContext';
 import {
   WIDGET_CATALOG,
   PRESET_CITIES,
@@ -36,6 +37,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const { user, signOut } = useAuth();
   const { mode, setMode } = useThemeContext();
+  const { density, setDensity } = useDisplayDensity();
   const { resetOnboarding } = useOnboarding();
   const {
     config,
@@ -282,6 +284,48 @@ export default function SettingsScreen() {
                 <Text style={styles.optionLabel}>{option.label}</Text>
               </View>
               {mode === option.value && (
+                <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Display Density Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Densité d'affichage</Text>
+        <Text style={styles.sectionDescription}>Ajustez l'espacement et la taille des cartes dans le feed</Text>
+        <View style={styles.card}>
+          {([
+            { value: 'compact' as DisplayDensity, label: 'Compact', icon: 'contract-outline' as const, description: 'Plus d\'articles visibles' },
+            { value: 'comfortable' as DisplayDensity, label: 'Confortable', icon: 'resize-outline' as const, description: 'Équilibré (par défaut)' },
+            { value: 'spacious' as DisplayDensity, label: 'Spacieux', icon: 'expand-outline' as const, description: 'Lecture plus aisée' },
+          ]).map((option, index) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.option,
+                index < 2 && styles.optionBorder,
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setDensity(option.value);
+              }}
+            >
+              <View style={styles.optionLeft}>
+                <View style={[styles.iconContainer, density === option.value && styles.iconContainerActive]}>
+                  <Ionicons
+                    name={option.icon}
+                    size={20}
+                    color={density === option.value ? colors.primary : colors.textMuted}
+                  />
+                </View>
+                <View>
+                  <Text style={styles.optionLabel}>{option.label}</Text>
+                  <Text style={styles.optionDescription}>{option.description}</Text>
+                </View>
+              </View>
+              {density === option.value && (
                 <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
               )}
             </TouchableOpacity>
@@ -751,6 +795,13 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       marginBottom: spacing.sm,
       marginLeft: spacing.sm,
     },
+    sectionDescription: {
+      ...typography.caption,
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+      marginLeft: spacing.sm,
+      marginTop: -spacing.xs,
+    },
     card: {
       backgroundColor: colors.surface,
       borderRadius: 12,
@@ -812,6 +863,11 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
     optionLabel: {
       ...typography.body,
       color: colors.textPrimary,
+    },
+    optionDescription: {
+      ...typography.caption,
+      color: colors.textMuted,
+      marginTop: 2,
     },
     versionText: {
       ...typography.body,

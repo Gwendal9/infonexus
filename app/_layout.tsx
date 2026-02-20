@@ -12,6 +12,8 @@ import { NetworkProvider, useNetwork } from '@/contexts/NetworkContext';
 import { ToastProvider, useToast } from '@/contexts/ToastContext';
 import { WidgetProvider } from '@/contexts/WidgetContext';
 import { TopicProvider } from '@/contexts/TopicContext';
+import { DisplayDensityProvider } from '@/contexts/DisplayDensityContext';
+import { SearchHistoryProvider } from '@/contexts/SearchHistoryContext';
 import { Onboarding } from '@/components/Onboarding';
 import { AppErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeDatabase } from '@/lib/db';
@@ -125,21 +127,25 @@ function RootLayoutNav() {
 function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
-      <NetworkProvider>
-        <ToastProvider>
-          <WidgetProvider>
-            <TopicProvider>
-              <QueryProvider>
-                <AuthProvider>
-                  <OnboardingProvider>
-                    {children}
-                  </OnboardingProvider>
-                </AuthProvider>
-              </QueryProvider>
-            </TopicProvider>
-          </WidgetProvider>
-        </ToastProvider>
-      </NetworkProvider>
+      <DisplayDensityProvider>
+        <SearchHistoryProvider>
+          <NetworkProvider>
+            <ToastProvider>
+              <WidgetProvider>
+                <TopicProvider>
+                  <QueryProvider>
+                    <AuthProvider>
+                      <OnboardingProvider>
+                        {children}
+                      </OnboardingProvider>
+                    </AuthProvider>
+                  </QueryProvider>
+                </TopicProvider>
+              </WidgetProvider>
+            </ToastProvider>
+          </NetworkProvider>
+        </SearchHistoryProvider>
+      </DisplayDensityProvider>
     </ThemeProvider>
   );
 }

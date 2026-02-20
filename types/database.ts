@@ -4,6 +4,9 @@
 export type SourceType = 'rss' | 'html' | 'youtube';
 export type SourceStatus = 'active' | 'error' | 'pending';
 
+// Navigation types
+export type MainTab = 'all' | 'categories' | 'topics';
+
 export interface Theme {
   id: string;
   user_id: string;
