@@ -64,8 +64,8 @@ export function TwoLevelNavigation({
 
   return (
     <View style={styles.container}>
-      {/* Main Tabs */}
-      <View style={styles.mainTabsContainer}>
+      {/* Main Tabs — compact segmented control */}
+      <View style={styles.segmentedControl}>
         {mainTabs.map((tab) => {
           const isSelected = mainTab === tab.id;
           const unreadCount = tab.id === 'all' ? unreadCounts.get(null) || 0 : 0;
@@ -73,25 +73,16 @@ export function TwoLevelNavigation({
           return (
             <TouchableOpacity
               key={tab.id}
-              style={[styles.mainTab, isSelected && styles.mainTabActive]}
+              style={[styles.segment, isSelected && styles.segmentActive]}
               onPress={() => handleMainTabPress(tab.id)}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name={tab.icon}
-                size={20}
-                color={isSelected ? colors.primary : colors.textMuted}
-              />
-              <Text style={[styles.mainTabText, isSelected && styles.mainTabTextActive]}>
+              {unreadCount > 0 && !isSelected && (
+                <View style={styles.unreadDot} />
+              )}
+              <Text style={[styles.segmentText, isSelected && styles.segmentTextActive]}>
                 {tab.label}
               </Text>
-              {unreadCount > 0 && !isSelected && (
-                <View style={[styles.mainTabBadge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.badgeText}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Text>
-                </View>
-              )}
             </TouchableOpacity>
           );
         })}
@@ -232,50 +223,52 @@ export function TwoLevelNavigation({
 const createStyles = (colors: ReturnType<typeof useColors>) =>
   StyleSheet.create({
     container: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    mainTabsContainer: {
+    segmentedControl: {
       flexDirection: 'row',
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm,
-      gap: spacing.xs,
+      marginHorizontal: spacing.md,
+      marginVertical: spacing.sm,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      padding: 2,
+      gap: 2,
     },
-    mainTab: {
+    segment: {
       flex: 1,
-      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: spacing.xs,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.sm,
-      borderRadius: 12,
-      backgroundColor: colors.surface,
+      paddingVertical: 6,
+      borderRadius: 6,
       position: 'relative',
     },
-    mainTabActive: {
-      backgroundColor: colors.primary + '15',
+    segmentActive: {
+      backgroundColor: colors.surface,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 2,
     },
-    mainTabText: {
-      ...typography.body,
-      fontWeight: '600',
+    segmentText: {
+      ...typography.caption,
       color: colors.textMuted,
+      fontWeight: '600',
     },
-    mainTabTextActive: {
-      color: colors.primary,
+    segmentTextActive: {
+      color: colors.textPrimary,
       fontWeight: '700',
     },
-    mainTabBadge: {
+    unreadDot: {
       position: 'absolute',
-      top: spacing.xs,
-      right: spacing.xs,
-      minWidth: 20,
-      height: 20,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: spacing.xxs,
+      top: 4,
+      right: 8,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.primary,
     },
     badgeText: {
       ...typography.caption,
