@@ -22,6 +22,7 @@ import { WordWidget } from '@/components/widgets/WordWidget';
 import { GitHubWidget } from '@/components/widgets/GitHubWidget';
 import { HistoryWidget } from '@/components/widgets/HistoryWidget';
 import { CurrencyWidget } from '@/components/widgets/CurrencyWidget';
+import { ReadingStatsWidget } from '@/components/widgets/ReadingStatsWidget';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
@@ -30,7 +31,7 @@ const GRID_PADDING = spacing.md;
 const GRID_GAP = spacing.sm;
 const WIDGET_SIZE = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
 
-type DetailType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | 'github' | 'history' | 'currency' | null;
+type DetailType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | 'github' | 'history' | 'currency' | 'reading-stats' | null;
 
 export default function WidgetsScreen() {
   const colors = useColors();
@@ -66,6 +67,7 @@ export default function WidgetsScreen() {
       case 'github': return 'GitHub Trending';
       case 'history': return "Aujourd'hui dans l'Histoire";
       case 'currency': return 'Taux de change';
+      case 'reading-stats': return 'Statistiques de lecture';
       default: return '';
     }
   };
@@ -173,6 +175,15 @@ export default function WidgetsScreen() {
                 <CurrencyWidget compact />
               </TouchableOpacity>
             )}
+            {config.enabled['reading-stats'] && (
+              <TouchableOpacity
+                style={styles.widgetTile}
+                onPress={() => handleWidgetPress('reading-stats')}
+                activeOpacity={0.8}
+              >
+                <ReadingStatsWidget compact />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -204,6 +215,7 @@ export default function WidgetsScreen() {
             {detailModal === 'github' && <GitHubWidget expanded />}
             {detailModal === 'history' && <HistoryWidget expanded />}
             {detailModal === 'currency' && <CurrencyWidget expanded />}
+            {detailModal === 'reading-stats' && <ReadingStatsWidget expanded />}
           </ScrollView>
         </View>
       </Modal>

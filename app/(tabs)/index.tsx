@@ -3,12 +3,14 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ScrollToTopButton, useScrollToTop } from '@/components/ScrollToTopButton';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -55,8 +57,33 @@ export default function FeedScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
 
+  const MAIN_TABS: MainTab[] = ['all', 'categories', 'topics'];
+  const currentTabIndexRef = useRef(0);
+  currentTabIndexRef.current = MAIN_TABS.indexOf(mainTab);
+
+  const swipeTabGesture = useMemo(() =>
+    Gesture.Pan()
+      .runOnJS(true)
+      .activeOffsetX([-40, 40])
+      .failOffsetY([-25, 25])
+      .onEnd((event) => {
+        const idx = currentTabIndexRef.current;
+        if (Math.abs(event.translationX) > 60) {
+          if (event.translationX < 0 && idx < MAIN_TABS.length - 1) {
+            Haptics.selectionAsync();
+            setMainTab(MAIN_TABS[idx + 1]);
+          } else if (event.translationX > 0 && idx > 0) {
+            Haptics.selectionAsync();
+            setMainTab(MAIN_TABS[idx - 1]);
+          }
+        }
+      }),
+    [] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   const [topicModalVisible, setTopicModalVisible] = useState(false);
   const [editingTopic, setEditingTopic] = useState<Topic | undefined>();
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
   const [filtersModalVisible, setFiltersModalVisible] = useState(false);
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({
     dateRange: 'all',
@@ -70,7 +97,8 @@ export default function FeedScreen() {
   const { config: topicConfig, addTopic, updateTopic, deleteTopic } = useTopics();
   const { history, addSearch } = useSearchHistory();
 
-  const { data: articles, isLoading, refetch, isRefetching } = useArticles();
+  const { data: articlesData, isLoading, refetch, isRefetching, fetchNextPage } = useArticles();
+  const articles = useMemo(() => articlesData?.pages.flat() ?? [], [articlesData]);
   const { data: favoriteIds } = useFavoriteIds();
   const { data: readArticleIds } = useReadArticleIds();
   const { data: themes } = useThemes();
@@ -90,6 +118,13 @@ export default function FeedScreen() {
     });
     return Array.from(sourcesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [articles]);
+  // Filter articles by selected sources (for the "all" tab)
+  const filteredFeedArticles = useMemo(() => {
+    if (!articles) return [];
+    if (selectedSourceIds.length === 0) return articles;
+    return articles.filter((a) => selectedSourceIds.includes(a.source_id));
+  }, [articles, selectedSourceIds]);
+
   const refreshSources = useRefreshSources();
   const toggleFavorite = useToggleFavorite();
   const markAsRead = useMarkAsRead();
@@ -425,59 +460,112 @@ export default function FeedScreen() {
         unreadCounts={unreadCounts}
       />
 
-      {/* Conditional rendering based on mainTab */}
-      {mainTab === 'all' && (
-        <ThemeArticleList
-          themeId={null}
-          articles={articles || []}
-          favoriteIds={favoriteIds}
-          readArticleIds={readArticleIds}
-          isRefreshing={isRefreshing}
-          isPending={refreshSources.isPending}
-          onRefresh={handleRefresh}
-          onArticlePress={handleArticlePress}
-          onToggleFavorite={handleToggleFavorite}
-          onMarkAsRead={(id: string) => markAsRead.mutate(id)}
-          colors={colors}
-        />
-      )}
-
-      {mainTab === 'categories' && (
-        <ThemeArticleList
-          themeId={selectedCategory}
-          articles={getArticlesForTheme(selectedCategory)}
-          favoriteIds={favoriteIds}
-          readArticleIds={readArticleIds}
-          isRefreshing={isRefreshing}
-          isPending={refreshSources.isPending}
-          onRefresh={handleRefresh}
-          onArticlePress={handleArticlePress}
-          onToggleFavorite={handleToggleFavorite}
-          onMarkAsRead={(id: string) => markAsRead.mutate(id)}
-          colors={colors}
-        />
-      )}
-
-      {mainTab === 'topics' && selectedTopic && (
-        <TopicArticleList topicId={selectedTopic} />
-      )}
-
-      {mainTab === 'topics' && !selectedTopic && (
-        <EmptyState
-          icon="bookmark-outline"
-          title="Sélectionnez un sujet"
-          description="Choisissez un sujet de veille ou créez-en un nouveau"
+      {/* Source filter bar (visible only in "all" tab) */}
+      {mainTab === 'all' && allSources.length > 1 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sourceFilterBar}
+          style={styles.sourceFilterBarContainer}
         >
-          <Button
-            title="Créer un sujet"
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setEditingTopic(undefined);
-              setTopicModalVisible(true);
-            }}
-          />
-        </EmptyState>
+          <TouchableOpacity
+            style={[
+              styles.sourceChip,
+              selectedSourceIds.length === 0 && styles.sourceChipActive,
+            ]}
+            onPress={() => setSelectedSourceIds([])}
+          >
+            <Text
+              style={[
+                styles.sourceChipText,
+                selectedSourceIds.length === 0 && styles.sourceChipTextActive,
+              ]}
+            >
+              Toutes
+            </Text>
+          </TouchableOpacity>
+          {allSources.map((source) => {
+            const isSelected = selectedSourceIds.includes(source.id);
+            return (
+              <TouchableOpacity
+                key={source.id}
+                style={[styles.sourceChip, isSelected && styles.sourceChipActive]}
+                onPress={() => {
+                  setSelectedSourceIds((prev) =>
+                    isSelected ? prev.filter((id) => id !== source.id) : [...prev, source.id]
+                  );
+                }}
+              >
+                <Text
+                  style={[styles.sourceChipText, isSelected && styles.sourceChipTextActive]}
+                  numberOfLines={1}
+                >
+                  {source.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       )}
+
+      {/* Swipeable content area */}
+      <GestureDetector gesture={swipeTabGesture}>
+        <View style={{ flex: 1 }}>
+          {mainTab === 'all' && (
+            <ThemeArticleList
+              themeId={null}
+              articles={filteredFeedArticles}
+              favoriteIds={favoriteIds}
+              readArticleIds={readArticleIds}
+              isRefreshing={isRefreshing}
+              isPending={refreshSources.isPending}
+              onRefresh={handleRefresh}
+              onArticlePress={handleArticlePress}
+              onToggleFavorite={handleToggleFavorite}
+              onMarkAsRead={(id: string) => markAsRead.mutate(id)}
+              onEndReached={fetchNextPage}
+              colors={colors}
+            />
+          )}
+
+          {mainTab === 'categories' && (
+            <ThemeArticleList
+              themeId={selectedCategory}
+              articles={getArticlesForTheme(selectedCategory)}
+              favoriteIds={favoriteIds}
+              readArticleIds={readArticleIds}
+              isRefreshing={isRefreshing}
+              isPending={refreshSources.isPending}
+              onRefresh={handleRefresh}
+              onArticlePress={handleArticlePress}
+              onToggleFavorite={handleToggleFavorite}
+              onMarkAsRead={(id: string) => markAsRead.mutate(id)}
+              colors={colors}
+            />
+          )}
+
+          {mainTab === 'topics' && selectedTopic && (
+            <TopicArticleList topicId={selectedTopic} />
+          )}
+
+          {mainTab === 'topics' && !selectedTopic && (
+            <EmptyState
+              icon="bookmark-outline"
+              title="Sélectionnez un sujet"
+              description="Choisissez un sujet de veille ou créez-en un nouveau"
+            >
+              <Button
+                title="Créer un sujet"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setEditingTopic(undefined);
+                  setTopicModalVisible(true);
+                }}
+              />
+            </EmptyState>
+          )}
+        </View>
+      </GestureDetector>
 
       <AddTopicModal
         visible={topicModalVisible}
@@ -506,6 +594,7 @@ interface ThemeArticleListProps {
   onArticlePress: (article: ArticleWithSource) => void;
   onToggleFavorite: (articleId: string) => void;
   onMarkAsRead: (articleId: string) => void;
+  onEndReached?: () => void;
   colors: ReturnType<typeof useColors>;
 }
 
@@ -520,6 +609,7 @@ function ThemeArticleList({
   onArticlePress,
   onToggleFavorite,
   onMarkAsRead,
+  onEndReached,
   colors,
 }: ThemeArticleListProps) {
   const styles = createStyles(colors);
@@ -536,6 +626,7 @@ function ThemeArticleList({
         onArticlePress={onArticlePress}
         onToggleFavorite={onToggleFavorite}
         onMarkAsRead={onMarkAsRead}
+        onEndReached={onEndReached}
         onScroll={onScroll}
         refreshControl={
           <RefreshControl
@@ -673,5 +764,36 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       justifyContent: 'center',
       alignItems: 'center',
       paddingTop: spacing.xxl,
+    },
+    sourceFilterBarContainer: {
+      maxHeight: 44,
+      backgroundColor: colors.surface,
+    },
+    sourceFilterBar: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      gap: spacing.xs,
+      flexDirection: 'row',
+    },
+    sourceChip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    sourceChipActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '15',
+    },
+    sourceChipText: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    sourceChipTextActive: {
+      color: colors.primary,
+      fontWeight: '700',
     },
   });

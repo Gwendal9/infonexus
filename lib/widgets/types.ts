@@ -1,6 +1,6 @@
 // Widget catalog and configuration types
 
-export type WidgetType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | 'github' | 'history' | 'currency';
+export type WidgetType = 'weather' | 'crypto' | 'quote' | 'football' | 'stock' | 'news' | 'word' | 'github' | 'history' | 'currency' | 'reading-stats';
 
 export interface WidgetDefinition {
   id: WidgetType;
@@ -92,6 +92,14 @@ export const WIDGET_CATALOG: WidgetDefinition[] = [
     icon: 'cash',
     defaultEnabled: false,
     hasSettings: true,
+  },
+  {
+    id: 'reading-stats',
+    name: 'Lecture',
+    description: 'Statistiques de lecture personnelles',
+    icon: 'bar-chart',
+    defaultEnabled: true,
+    hasSettings: false,
   },
 ];
 
@@ -284,6 +292,7 @@ export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
     github: false,
     history: false,
     currency: false,
+    'reading-stats': true,
   },
   settings: {
     weather: {

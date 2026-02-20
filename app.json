@@ -17,7 +17,8 @@
       "expo-router",
       "expo-font",
       "expo-background-fetch",
-      "expo-task-manager"
+      "expo-task-manager",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -50,7 +51,10 @@
         "backgroundColor": "#FF6B35"
       },
       "permissions": [
-        "INTERNET"
+        "INTERNET",
+        "NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
       ]
     },
     "extra": {

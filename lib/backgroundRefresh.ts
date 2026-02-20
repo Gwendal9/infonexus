@@ -1,9 +1,11 @@
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
+import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pullFromSupabase } from '@/lib/sync';
+import * as db from '@/lib/db';
 
 const BACKGROUND_FETCH_TASK = 'background-article-refresh';
 const BG_RESULT_KEY = '@infonexus_bg_refresh_result';
@@ -31,6 +33,12 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
       })
     );
     console.log(`[BackgroundRefresh] Fetched ${result.articlesCount} articles`);
+
+    // Send notifications for articles matching topic keywords
+    if (result.articlesCount > 0) {
+      await sendTopicNotifications();
+    }
+
     return result.articlesCount > 0
       ? BackgroundFetch.BackgroundFetchResult.NewData
       : BackgroundFetch.BackgroundFetchResult.NoData;
@@ -39,6 +47,52 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
     return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });
+
+async function sendTopicNotifications(): Promise<void> {
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return;
+
+    // Read topics config from AsyncStorage
+    const raw = await AsyncStorage.getItem('topics_config');
+    if (!raw) return;
+    const config = JSON.parse(raw);
+    const topics: Array<{ id: string; name: string; keywords: string[] }> = config.topics ?? [];
+    if (topics.length === 0) return;
+
+    // Ensure DB is initialized (background task runs in a fresh JS context)
+    await db.initializeDatabase();
+
+    // Get recent articles from local DB (last 30 minutes)
+    const articles = await db.getArticles();
+    const cutoff = Date.now() - 30 * 60 * 1000;
+    const recentArticles = articles.filter((a) => {
+      if (!a.published_at) return false;
+      return new Date(a.published_at).getTime() > cutoff;
+    });
+
+    // Match articles against topics and send up to 3 notifications
+    let notifCount = 0;
+    for (const article of recentArticles) {
+      if (notifCount >= 3) break;
+      const matched = topics.filter((t) =>
+        t.keywords.some((k) => article.title.toLowerCase().includes(k.toLowerCase()))
+      );
+      if (matched.length > 0) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `Nouveau : ${matched[0].name}`,
+            body: article.title,
+          },
+          trigger: null, // immediate
+        });
+        notifCount++;
+      }
+    }
+  } catch (error) {
+    console.log('[BackgroundRefresh] Notification error:', error);
+  }
+}
 
 export async function registerBackgroundFetch(): Promise<void> {
   try {

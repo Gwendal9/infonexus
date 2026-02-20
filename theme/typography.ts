@@ -32,6 +32,20 @@ export const typography = {
     fontFamily,
   } as TextStyle,
 
+  subheading: {
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 19,
+    fontFamily,
+  } as TextStyle,
+
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 23,
+    fontFamily,
+  } as TextStyle,
+
   body: {
     fontSize: 14,
     fontWeight: '400',

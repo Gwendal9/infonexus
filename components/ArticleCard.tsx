@@ -1,4 +1,5 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AnimatedHeart } from '@/components/AnimatedHeart';
@@ -70,7 +71,7 @@ export function ArticleCard({ article, onPress, isFavorite, onToggleFavorite, is
         {hasImage ? (
           <>
             <View style={styles.imageContainer}>
-              <Image source={{ uri: article.image_url! }} style={[styles.image, { height: densityValues.imageHeight }]} resizeMode="cover" />
+              <Image source={{ uri: article.image_url! }} style={[styles.image, { height: densityValues.imageHeight }]} contentFit="cover" />
               {onToggleFavorite && (
                 <AnimatedHeart
                   isFavorite={isFavorite ?? false}

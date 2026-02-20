@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Platform, StyleSheet, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -22,11 +23,10 @@ import { processSyncQueue } from '@/lib/sync';
 import { registerBackgroundFetch, getBackgroundRefreshResult } from '@/lib/backgroundRefresh';
 import { initSentry } from '@/lib/sentry';
 import { supabase } from '@/utils/supabase';
-import { clearSyncQueue } from '@/lib/db/operations';
 
 const CORRECT_LEPARISIEN_URL = 'https://feeds.leparisien.fr/leparisien/rss';
 
-async function migrateSourceUrls(userId: string) {
+async function migrateSourceUrls(userId: string): Promise<number> {
   // Fix any Le Parisien source whose URL isn't the correct one
   const { data: sources } = await supabase
     .from('sources')
@@ -35,12 +35,15 @@ async function migrateSourceUrls(userId: string) {
     .ilike('url', '%leparisien%')
     .neq('url', CORRECT_LEPARISIEN_URL);
 
-  if (!sources || sources.length === 0) return;
+  console.log(`[Migration] Found ${sources?.length ?? 0} Le Parisien source(s) to fix`);
+  if (!sources || sources.length === 0) return 0;
 
   for (const source of sources) {
     await supabase.from('sources').update({ url: CORRECT_LEPARISIEN_URL }).eq('id', source.id);
     console.log(`[Migration] Fixed Le Parisien URL: ${source.url} → ${CORRECT_LEPARISIEN_URL}`);
   }
+
+  return sources.length;
 }
 
 // Initialize Sentry before any React code
@@ -57,6 +60,28 @@ function RootLayoutNav() {
   const [dbReady, setDbReady] = useState(false);
 
   const styles = createStyles(colors);
+  const queryClient = useQueryClient();
+
+  // Request notification permissions once after login
+  useEffect(() => {
+    if (!session) return;
+    (async () => {
+      try {
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'InfoNexus',
+            importance: Notifications.AndroidImportance.DEFAULT,
+          });
+        }
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          await Notifications.requestPermissionsAsync();
+        }
+      } catch {
+        // Notifications not available (e.g., simulator)
+      }
+    })();
+  }, [session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize database on app start
   useEffect(() => {
@@ -72,11 +97,10 @@ function RootLayoutNav() {
       });
   }, []);
 
-  // Migrate broken source URLs + clean up stuck sync queue items on startup
+  // Migrate broken source URLs on startup
   useEffect(() => {
     if (session?.user?.id) {
       migrateSourceUrls(session.user.id).catch(() => {});
-      clearSyncQueue().catch(() => {});
     }
   }, [session?.user?.id]);
 
@@ -97,7 +121,6 @@ function RootLayoutNav() {
   }, [dbReady, session]);
 
   // Check for background refresh results when app comes to foreground
-  const queryClient = useQueryClient();
   const { showSuccess } = useToast();
   const appState = useRef(AppState.currentState);
 

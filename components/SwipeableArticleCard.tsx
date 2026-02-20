@@ -29,11 +29,12 @@ export function SwipeableArticleCard({
   const colors = useColors();
   const swipeableRef = useRef<Swipeable>(null);
 
+  // LEFT swipe = mark as read (green checkmark)
   const renderLeftActions = (
     progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>
   ) => {
-    if (!onToggleFavorite) return null;
+    if (!onMarkAsRead || isRead) return null;
 
     const translateX = dragX.interpolate({
       inputRange: [0, 80],
@@ -56,23 +57,24 @@ export function SwipeableArticleCard({
         style={[
           styles.leftAction,
           {
-            backgroundColor: colors.statusError,
+            backgroundColor: '#34C759',
             opacity,
             transform: [{ translateX }, { scale }],
           },
         ]}
       >
-        <Ionicons name={isFavorite ? 'heart-dislike' : 'heart'} size={24} color="#FFFFFF" />
-        <Text style={styles.actionText}>{isFavorite ? 'Retirer' : 'Favori'}</Text>
+        <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+        <Text style={styles.actionText}>Lu</Text>
       </Animated.View>
     );
   };
 
+  // RIGHT swipe = favorite (pink heart)
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>
   ) => {
-    if (!onMarkAsRead || isRead) return null;
+    if (!onToggleFavorite) return null;
 
     const translateX = dragX.interpolate({
       inputRange: [-80, 0],
@@ -95,14 +97,14 @@ export function SwipeableArticleCard({
         style={[
           styles.rightAction,
           {
-            backgroundColor: colors.primary,
+            backgroundColor: '#FF2D55',
             opacity,
             transform: [{ translateX }, { scale }],
           },
         ]}
       >
-        <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
-        <Text style={styles.actionText}>Lu</Text>
+        <Ionicons name={isFavorite ? 'heart-dislike' : 'heart'} size={24} color="#FFFFFF" />
+        <Text style={styles.actionText}>{isFavorite ? 'Retirer' : 'Favori'}</Text>
       </Animated.View>
     );
   };
@@ -110,14 +112,14 @@ export function SwipeableArticleCard({
   const handleSwipeOpen = (direction: 'left' | 'right') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    if (direction === 'left' && onToggleFavorite) {
-      setTimeout(() => {
-        onToggleFavorite();
-        swipeableRef.current?.close();
-      }, 200);
-    } else if (direction === 'right' && onMarkAsRead) {
+    if (direction === 'left' && onMarkAsRead) {
       setTimeout(() => {
         onMarkAsRead();
+        swipeableRef.current?.close();
+      }, 200);
+    } else if (direction === 'right' && onToggleFavorite) {
+      setTimeout(() => {
+        onToggleFavorite();
         swipeableRef.current?.close();
       }, 200);
     }
@@ -138,8 +140,8 @@ export function SwipeableArticleCard({
   return (
     <Swipeable
       ref={swipeableRef}
-      renderLeftActions={onToggleFavorite ? renderLeftActions : undefined}
-      renderRightActions={onMarkAsRead && !isRead ? renderRightActions : undefined}
+      renderLeftActions={onMarkAsRead && !isRead ? renderLeftActions : undefined}
+      renderRightActions={onToggleFavorite ? renderRightActions : undefined}
       onSwipeableOpen={handleSwipeOpen}
       rightThreshold={40}
       leftThreshold={40}

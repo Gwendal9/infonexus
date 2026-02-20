@@ -16,6 +16,12 @@ interface DetectionResult {
 export async function detectSourceType(inputUrl: string): Promise<DetectionResult> {
   const url = normalizeUrl(inputUrl);
 
+  // Substack: *.substack.com → *.substack.com/feed
+  if (url.includes('.substack.com') && !url.includes('/feed')) {
+    const base = url.replace(/\/$/, '').split('?')[0];
+    return { type: 'rss', url: `${base}/feed`, confidence: 'high' };
+  }
+
   // Check for YouTube
   const youtubeResult = await detectYouTube(url);
   if (youtubeResult) {

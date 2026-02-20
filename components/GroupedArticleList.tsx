@@ -1,5 +1,6 @@
 import { forwardRef, useMemo, useState, useCallback } from 'react';
-import { RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, RefreshControlProps, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArticleWithSource } from '@/lib/queries/useArticles';
 import { SwipeableArticleCard } from '@/components/SwipeableArticleCard';
 import { TimelineNavigator } from '@/components/TimelineNavigator';
@@ -15,9 +16,10 @@ interface GroupedArticleListProps {
   onToggleFavorite: (articleId: string) => void;
   onMarkAsRead: (articleId: string) => void;
   onScroll?: (event: any) => void;
+  onEndReached?: () => void;
   ListHeaderComponent?: React.ReactElement | null;
   ListEmptyComponent?: React.ReactElement | null;
-  refreshControl?: React.ReactElement;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
 
 interface ArticleSection {
@@ -62,12 +64,14 @@ export const GroupedArticleList = forwardRef<SectionList, GroupedArticleListProp
     onToggleFavorite,
     onMarkAsRead,
     onScroll,
+    onEndReached,
     ListHeaderComponent,
     ListEmptyComponent,
     refreshControl,
   }, ref) {
     const colors = useColors();
     const styles = createStyles(colors);
+    const queryClient = useQueryClient();
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
 
     // Handle timeline navigation
@@ -177,6 +181,8 @@ export const GroupedArticleList = forwardRef<SectionList, GroupedArticleListProp
         ListHeaderComponent={ListHeaderComponent}
         ListEmptyComponent={ListEmptyComponent}
         refreshControl={refreshControl}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
         onScroll={handleScrollWithTracking}
         scrollEventThrottle={100}
         onViewableItemsChanged={({ viewableItems }) => {
@@ -189,6 +195,13 @@ export const GroupedArticleList = forwardRef<SectionList, GroupedArticleListProp
               setCurrentSectionIndex(sectionIndex);
             }
           }
+          // Seed article cache with data already in the list (no DB/network call)
+          viewableItems.forEach(({ item }) => {
+            if (!item?.id) return;
+            if (!queryClient.getQueryData(['article', item.id])) {
+              queryClient.setQueryData(['article', item.id], item);
+            }
+          });
         }}
         viewabilityConfig={{
           itemVisiblePercentThreshold: 50,
