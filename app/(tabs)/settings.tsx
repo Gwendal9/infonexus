@@ -16,6 +16,8 @@ import {
   PRESET_LEAGUES,
   PRESET_STOCKS,
   PRESET_ETFS,
+  PRESET_INDICES,
+  PRESET_CAC40_STOCKS,
   NEWS_CATEGORIES,
   PRESET_CURRENCIES,
   PRESET_CURRENCY_PAIRS,
@@ -642,6 +644,62 @@ export default function SettingsScreen() {
                             ]}
                           >
                             {etf.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.settingsLabel, { marginTop: spacing.md }]}>Indices</Text>
+                  <View style={styles.optionsGrid}>
+                    {PRESET_INDICES.map((idx) => {
+                      const isSelected = config.settings.stock.items.some(
+                        (s) => s.symbol === idx.symbol
+                      );
+                      return (
+                        <TouchableOpacity
+                          key={idx.symbol}
+                          style={[
+                            styles.optionChip,
+                            isSelected && styles.optionChipActive,
+                          ]}
+                          onPress={() => handleStockToggle(idx)}
+                        >
+                          <Text
+                            style={[
+                              styles.optionChipText,
+                              isSelected && styles.optionChipTextActive,
+                            ]}
+                          >
+                            {idx.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.settingsLabel, { marginTop: spacing.md }]}>Actions CAC 40</Text>
+                  <View style={styles.optionsGrid}>
+                    {PRESET_CAC40_STOCKS.map((stock) => {
+                      const isSelected = config.settings.stock.items.some(
+                        (s) => s.symbol === stock.symbol
+                      );
+                      return (
+                        <TouchableOpacity
+                          key={stock.symbol}
+                          style={[
+                            styles.optionChip,
+                            isSelected && styles.optionChipActive,
+                          ]}
+                          onPress={() => handleStockToggle(stock)}
+                        >
+                          <Text
+                            style={[
+                              styles.optionChipText,
+                              isSelected && styles.optionChipTextActive,
+                            ]}
+                          >
+                            {stock.name}
                           </Text>
                         </TouchableOpacity>
                       );

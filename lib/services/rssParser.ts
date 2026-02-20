@@ -153,8 +153,8 @@ function parseAtomEntry(entry: AtomEntry): ParsedArticle | null {
 export async function parseRSSFeed(feedUrl: string): Promise<ParsedArticle[]> {
   const response = await fetch(feedUrl, {
     headers: {
-      'User-Agent': 'InfoNexus/1.0',
-      Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml',
+      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*;q=0.8',
     },
   });
 

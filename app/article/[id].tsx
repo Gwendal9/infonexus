@@ -117,8 +117,21 @@ export default function ArticleDetailScreen() {
         showSuccess('Article complet récupéré');
       }
     } else {
-      showError("Impossible d'extraire le contenu. Ouverture dans le navigateur...");
-      Linking.openURL(article.url);
+      // Fallback: afficher le résumé RSS plutôt que d'ouvrir le navigateur
+      const summary = article.summary ?? null;
+      const fallbackHtml = summary
+        ? `<p>${summary}</p><p><em>Le contenu complet n'a pas pu être extrait. Utilisez « Ouvrir dans le navigateur » pour lire l'article entier.</em></p>`
+        : `<p><em>Le contenu de cet article n'est pas disponible en lecture intégrée. Utilisez « Ouvrir dans le navigateur » pour le lire.</em></p>`;
+
+      setArticleContent({
+        title: article.title,
+        content: fallbackHtml,
+        textContent: summary ?? '',
+        author: article.author ?? null,
+        siteName: article.source?.name ?? null,
+        estimatedReadTime: 1,
+      });
+      setReaderMode(true);
     }
 
     setLoadingContent(false);

@@ -23,7 +23,8 @@ export const sourceCatalog: CatalogSource[] = [
   { id: 'lobs', name: "L'Obs", url: 'https://www.nouvelobs.com/rss.xml', type: 'rss', category: 'Actualités' },
   { id: 'lexpress', name: "L'Express", url: 'https://www.lexpress.fr/arc/outboundfeeds/rss/alaune.xml', type: 'rss', category: 'Actualités' },
   { id: 'mediapart', name: 'Mediapart', url: 'https://www.mediapart.fr/articles/feed', type: 'rss', category: 'Actualités' },
-  { id: 'leparisien', name: 'Le Parisien', url: 'https://www.leparisien.fr/rss.php', type: 'rss', category: 'Actualités' },
+  { id: 'leparisien', name: 'Le Parisien', url: 'https://feeds.leparisien.fr/leparisien/rss', type: 'rss', category: 'Actualités' },
+  { id: 'lesechos', name: 'Les Échos', url: 'https://www.lesechos.fr/rss/rss_une.xml', type: 'rss', category: 'Économie' },
 
   // Tech
   { id: 'frandroid', name: 'Frandroid', url: 'https://www.frandroid.com/feed', type: 'rss', category: 'Tech' },

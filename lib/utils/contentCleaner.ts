@@ -159,14 +159,28 @@ function removeElementsBySelectors(html: string, selectors: string[]): string {
       cleaned = cleaned.replace(pattern, '');
     }
 
-    // Handle attribute selectors like [data-share]
+    // Handle attribute selectors like [data-share] or [class*="value"]
     if (selector.startsWith('[') && selector.endsWith(']')) {
-      const attr = selector.slice(1, -1).split('*=')[0];
-      const pattern = new RegExp(
-        `<[^>]+${attr}[^>]*>.*?</[^>]+>`,
-        'gis'
-      );
-      cleaned = cleaned.replace(pattern, '');
+      const inner = selector.slice(1, -1);
+      if (inner.includes('*=')) {
+        // [attr*="value"] - attribute contains value
+        const eqIdx = inner.indexOf('*=');
+        const attrName = inner.slice(0, eqIdx).trim();
+        const attrValue = inner.slice(eqIdx + 2).replace(/["']/g, '').trim();
+        const pattern = new RegExp(
+          `<[^>]+${attrName}=["'][^"']*${attrValue}[^"']*["'][^>]*>[\\s\\S]*?</[^>]+>`,
+          'gi'
+        );
+        cleaned = cleaned.replace(pattern, '');
+      } else {
+        // [attr] - simple attribute exists
+        const attr = inner.split('=')[0].trim();
+        const pattern = new RegExp(
+          `<[^>]+\\s${attr}(?:=["'][^"']*["'])?[^>]*>.*?</[^>]+>`,
+          'gis'
+        );
+        cleaned = cleaned.replace(pattern, '');
+      }
     }
   }
 
@@ -343,25 +357,24 @@ export function removeUnwantedText(html: string): string {
 }
 
 /**
- * Master cleaning function - applies all cleaners
+ * Master cleaning function - applies all cleaners.
+ * Only uses CSS-class-based removal (safe).
+ * Text-content-based removal is intentionally skipped to avoid
+ * accidentally removing legitimate article content.
  */
 export function cleanArticleContent(html: string): string {
   let cleaned = html;
 
-  // Apply all cleaning functions in sequence
-  cleaned = removePaywallContent(cleaned);
-  cleaned = removeSocialLinks(cleaned);
-  cleaned = removeNewsletterSignups(cleaned);
-  cleaned = removeComments(cleaned);
-  cleaned = removeRelatedArticles(cleaned);
-  cleaned = removeUnwantedText(cleaned); // Remove ads, device limits, etc.
+  // Only remove by CSS class (safe — doesn't touch text content)
+  cleaned = removeElementsBySelectors(cleaned, PAYWALL_SELECTORS);
+  cleaned = removeElementsBySelectors(cleaned, SOCIAL_SELECTORS);
+  cleaned = removeElementsBySelectors(cleaned, NEWSLETTER_SELECTORS);
+  cleaned = removeElementsBySelectors(cleaned, COMMENT_SELECTORS);
+  cleaned = removeElementsBySelectors(cleaned, RELATED_SELECTORS);
 
   // Remove empty paragraphs and divs
   cleaned = cleaned.replace(/<p[^>]*>\s*<\/p>/g, '');
   cleaned = cleaned.replace(/<div[^>]*>\s*<\/div>/g, '');
-
-  // Normalize whitespace
-  cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n');
 
   return cleaned;
 }

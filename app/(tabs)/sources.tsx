@@ -2,6 +2,8 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -21,6 +23,8 @@ import { useSources } from '@/lib/queries/useSources';
 import { useThemes } from '@/lib/queries/useThemes';
 import { useAllSourceThemes } from '@/lib/queries/useSourceThemes';
 import { useAddSource, useDeleteSource } from '@/lib/mutations/useSourceMutations';
+import { parseRSSFeed } from '@/lib/services/rssParser';
+import { useToast } from '@/contexts/ToastContext';
 import {
   useAddTheme,
   useDeleteTheme,
@@ -35,12 +39,14 @@ import { typography } from '@/theme/typography';
 
 export default function SourcesScreen() {
   const colors = useColors();
+  const { showSuccess, showError } = useToast();
   const [sourceModalVisible, setSourceModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [topicModalVisible, setTopicModalVisible] = useState(false);
   const [editingTopic, setEditingTopic] = useState<Topic | undefined>();
   const [assignThemeSourceId, setAssignThemeSourceId] = useState<string | null>(null);
   const [healthSourceId, setHealthSourceId] = useState<string | null>(null);
+  const [testingSourceIds, setTestingSourceIds] = useState<Set<string>>(new Set());
 
   const styles = createStyles(colors);
 
@@ -87,6 +93,26 @@ export default function SourcesScreen() {
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Erreur', e.message || 'Erreur inconnue');
+    }
+  };
+
+  const handleTestSource = async (sourceId: string, url: string) => {
+    setTestingSourceIds((prev) => new Set(prev).add(sourceId));
+    try {
+      const articles = await parseRSSFeed(url);
+      if (articles.length > 0) {
+        showSuccess(`✓ ${articles.length} article${articles.length > 1 ? 's' : ''} trouvé${articles.length > 1 ? 's' : ''}`);
+      } else {
+        showError('Flux vide ou non reconnu');
+      }
+    } catch {
+      showError('Erreur : impossible de lire ce flux');
+    } finally {
+      setTestingSourceIds((prev) => {
+        const next = new Set(prev);
+        next.delete(sourceId);
+        return next;
+      });
     }
   };
 
@@ -200,6 +226,8 @@ export default function SourcesScreen() {
                     onDelete={() => deleteSource.mutate(source.id)}
                     onPress={() => setAssignThemeSourceId(source.id)}
                     onHealthPress={() => setHealthSourceId(source.id)}
+                    onTestPress={() => handleTestSource(source.id, source.url)}
+                    isTesting={testingSourceIds.has(source.id)}
                   />
                   {assignedThemes.length > 0 && (
                     <View style={styles.assignedThemes}>
@@ -273,14 +301,17 @@ export default function SourcesScreen() {
       )}
 
       {/* Assign Themes Modal */}
-      {assignThemeSourceId && (
-        <TouchableOpacity
-          key={assignThemeSourceId}
+      <Modal
+        visible={!!assignThemeSourceId}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAssignThemeSourceId(null)}
+      >
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
           onPress={() => setAssignThemeSourceId(null)}
         >
-          <TouchableOpacity activeOpacity={1} style={styles.assignModal}>
+          <Pressable style={styles.assignModal} onPress={() => {}}>
             <View style={styles.modalHandle} />
 
             <Text style={styles.assignModalTitle} numberOfLines={1}>
@@ -297,7 +328,7 @@ export default function SourcesScreen() {
                       <TouchableOpacity
                         key={theme.id}
                         style={[styles.themeRow, isAssigned && styles.themeRowActive]}
-                        onPress={() => handleToggleTheme(assignThemeSourceId, theme.id)}
+                        onPress={() => handleToggleTheme(assignThemeSourceId!, theme.id)}
                         activeOpacity={0.7}
                       >
                         <View
@@ -329,9 +360,9 @@ export default function SourcesScreen() {
                 </Text>
               </View>
             )}
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -433,11 +464,7 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       shadowRadius: 4,
     },
     modalOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
+      flex: 1,
       backgroundColor: 'rgba(0,0,0,0.4)',
       justifyContent: 'flex-end',
     },
@@ -447,7 +474,8 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       borderTopRightRadius: 24,
       paddingHorizontal: spacing.xl,
       paddingBottom: spacing.xxl,
-      maxHeight: '60%',
+      maxHeight: '70%',
+      minHeight: 300,
     },
     modalHandle: {
       width: 36,
@@ -471,7 +499,7 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       marginBottom: spacing.lg,
     },
     themesListScroll: {
-      flex: 1,
+      maxHeight: 280,
     },
     themesList: {
       gap: spacing.sm,

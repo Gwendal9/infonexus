@@ -13,6 +13,8 @@ interface SwipeableSourceCardProps {
   onRefresh?: () => void;
   onPress?: () => void;
   onHealthPress?: () => void;
+  onTestPress?: () => void;
+  isTesting?: boolean;
 }
 
 export function SwipeableSourceCard({
@@ -21,6 +23,8 @@ export function SwipeableSourceCard({
   onRefresh,
   onPress,
   onHealthPress,
+  onTestPress,
+  isTesting,
 }: SwipeableSourceCardProps) {
   const colors = useColors();
   const swipeableRef = useRef<Swipeable>(null);
@@ -131,7 +135,7 @@ export function SwipeableSourceCard({
       overshootRight={false}
       overshootLeft={false}
     >
-      <SourceCard source={source} onDelete={onDelete} onPress={onPress} onHealthPress={onHealthPress} />
+      <SourceCard source={source} onDelete={onDelete} onPress={onPress} onHealthPress={onHealthPress} onTestPress={onTestPress} isTesting={isTesting} />
     </Swipeable>
   );
 }

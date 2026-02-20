@@ -18,7 +18,7 @@ export interface ArticleContent {
   bypassUsed?: boolean;
 }
 
-const FETCH_TIMEOUT = 15000;
+const FETCH_TIMEOUT = 25000;
 
 const REMOVE_TAGS = [
   'script', 'style', 'noscript', 'iframe', 'svg', 'form',
@@ -144,7 +144,7 @@ export async function extractArticleContent(
 
     return {
       title: title || 'Article',
-      content: contentHtml,
+      content: contentHtml ?? '',
       textContent,
       author,
       siteName,
@@ -164,8 +164,9 @@ async function fetchPage(url: string): Promise<string | null> {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'InfoNexus/1.0 (News Aggregator)',
-        Accept: 'text/html,application/xhtml+xml',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
       },
     });
     clearTimeout(timeout);
@@ -211,6 +212,13 @@ interface ContentCandidate {
 }
 
 function extractMainContent(html: string): string | null {
+  // Try paragraph-based extraction FIRST — most reliable for modern sites
+  const earlyParagraphs = extractParagraphs(html);
+  if (earlyParagraphs) {
+    console.log('[ArticleReader] ✓ Early paragraph extraction succeeded');
+    return earlyParagraphs;
+  }
+
   const patterns: Array<{ pattern: RegExp; score: number; name: string }> = [
     // Highest priority: HTML5 semantic tags
     {
@@ -268,8 +276,8 @@ function extractMainContent(html: string): string | null {
       const textContent = stripHtmlTags(content);
       const wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
 
-      // Ignore candidates that are too short (less than 50 words)
-      if (wordCount < 50) continue;
+      // Ignore candidates that are too short (less than 20 words)
+      if (wordCount < 20) continue;
 
       candidates.push({
         content,
@@ -287,25 +295,90 @@ function extractMainContent(html: string): string | null {
     return candidates[0].content;
   }
 
-  // Fallback: find the largest text block in <body>
-  console.log('[ArticleReader] No pattern matched, using fallback');
-  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  if (bodyMatch) {
-    // Try to remove obvious navigation elements
-    let cleaned = bodyMatch[1];
-    cleaned = cleaned.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
-    cleaned = cleaned.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
-    cleaned = cleaned.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
-    cleaned = cleaned.replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '');
-    return cleaned;
-  }
+  // Last resort: strip ALL HTML and return plain text blocks
+  console.log('[ArticleReader] Using text-block fallback');
+  return extractTextBlocks(html);
+}
 
+/**
+ * Strip all HTML and extract text lines as <p> blocks.
+ * Works for any HTML structure — the ultimate fallback.
+ */
+function extractTextBlocks(html: string): string | null {
+  // Remove non-article areas
+  let body = html
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+    .replace(/<header[\s\S]*?<\/header>/gi, '')
+    .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+    .replace(/<aside[\s\S]*?<\/aside>/gi, '');
+
+  // Convert structural HTML to newlines, then strip remaining tags
+  body = body
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#\d+;/g, ' ');
+
+  const blocks = body
+    .split('\n')
+    .map(line => line.replace(/\s+/g, ' ').trim())
+    .filter(line => line.split(/\s+/).filter(w => w.length > 1).length >= 8);
+
+  if (blocks.length >= 2) {
+    return blocks.map(b => `<p>${b}</p>`).join('\n');
+  }
   return null;
 }
 
 // Utility function to extract plain text
 function stripHtmlTags(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Extract article content by collecting all substantial <p> tags.
+ * Pre-strips non-content areas so navigation text isn't picked up.
+ */
+function extractParagraphs(html: string): string | null {
+  // Remove areas that never contain article text
+  let body = html;
+  body = body.replace(/<head[\s\S]*?<\/head>/gi, '');
+  body = body.replace(/<script[\s\S]*?<\/script>/gi, '');
+  body = body.replace(/<style[\s\S]*?<\/style>/gi, '');
+  body = body.replace(/<nav[\s\S]*?<\/nav>/gi, '');
+  body = body.replace(/<header[\s\S]*?<\/header>/gi, '');
+  body = body.replace(/<footer[\s\S]*?<\/footer>/gi, '');
+  body = body.replace(/<aside[\s\S]*?<\/aside>/gi, '');
+
+  const collected: string[] = [];
+  const re = /<p(?:\s[^>]*)?>[\s\S]*?<\/p>/gi;
+  let m: RegExpExecArray | null;
+
+  while ((m = re.exec(body)) !== null) {
+    const text = m[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    // Keep paragraphs with at least 8 words
+    if (text.split(/\s+/).filter(w => w.length > 0).length >= 8) {
+      collected.push(m[0]);
+    }
+  }
+
+  // At least 2 substantial paragraphs to be considered an article
+  if (collected.length >= 2) {
+    return collected.join('\n');
+  }
+  return null;
 }
 
 function cleanContent(html: string, baseUrl: string): string {

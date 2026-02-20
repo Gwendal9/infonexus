@@ -137,7 +137,8 @@ export async function processSyncQueue(): Promise<{ processed: number; failed: n
 
   for (const item of queue) {
     if (item.retry_count >= MAX_RETRIES) {
-      console.log(`[Sync] Skipping item ${item.id} - max retries reached`);
+      // Remove permanently instead of skipping indefinitely
+      await removeSyncQueueItem(item.id);
       failed++;
       continue;
     }
@@ -150,7 +151,7 @@ export async function processSyncQueue(): Promise<{ processed: number; failed: n
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await updateSyncQueueItemError(item.id, errorMessage);
       failed++;
-      console.error(`[Sync] Failed to process item ${item.id}:`, error);
+      console.warn(`[Sync] Failed to process item ${item.id} (retry ${item.retry_count + 1}/${MAX_RETRIES}):`, errorMessage);
     }
   }
 

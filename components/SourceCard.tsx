@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Source } from '@/types/database';
 import { SourceHealthBadge } from './SourceHealthBadge';
@@ -11,6 +11,8 @@ interface SourceCardProps {
   onDelete: () => void;
   onPress?: () => void;
   onHealthPress?: () => void;
+  onTestPress?: () => void;
+  isTesting?: boolean;
 }
 
 const typeIcons = {
@@ -35,7 +37,7 @@ function getRelativeTime(date: string): string {
   return past.toLocaleDateString('fr-FR');
 }
 
-export function SourceCard({ source, onDelete, onPress, onHealthPress }: SourceCardProps) {
+export function SourceCard({ source, onDelete, onPress, onHealthPress, onTestPress, isTesting }: SourceCardProps) {
   const colors = useColors();
   const styles = createStyles(colors);
 
@@ -91,7 +93,14 @@ export function SourceCard({ source, onDelete, onPress, onHealthPress }: SourceC
         )}
       </View>
 
-      <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+      <TouchableOpacity onPress={onTestPress} style={styles.actionButton} disabled={isTesting}>
+        {isTesting ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Ionicons name="flash-outline" size={20} color={colors.primary} />
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
         <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -160,8 +169,10 @@ const createStyles = (colors: ReturnType<typeof useColors>) =>
       color: colors.statusError,
       flex: 1,
     },
-    deleteButton: {
+    actionButton: {
       padding: spacing.xs,
       marginLeft: spacing.sm,
+      width: 32,
+      alignItems: 'center',
     },
   });

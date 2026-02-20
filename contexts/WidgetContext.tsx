@@ -12,6 +12,8 @@ import {
   DEFAULT_WIDGET_CONFIG,
   PRESET_STOCKS,
   PRESET_ETFS,
+  PRESET_INDICES,
+  PRESET_CAC40_STOCKS,
 } from '@/lib/widgets/types';
 
 const STORAGE_KEY = 'widget_config';
@@ -67,9 +69,15 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
             stock: (() => {
               const merged = { ...DEFAULT_WIDGET_CONFIG.settings.stock, ...parsed.settings?.stock };
               // Filter out stock symbols that no longer exist in presets
-              const validSymbols = new Set([...PRESET_STOCKS, ...PRESET_ETFS].map(s => s.symbol));
+              const validSymbols = new Set([...PRESET_STOCKS, ...PRESET_ETFS, ...PRESET_INDICES, ...PRESET_CAC40_STOCKS].map(s => s.symbol));
               const filteredItems = (merged.items ?? []).filter((item: any) => validSymbols.has(item.symbol));
-              return { ...merged, items: filteredItems.length > 0 ? filteredItems : DEFAULT_WIDGET_CONFIG.settings.stock.items };
+              const baseItems = filteredItems.length > 0 ? filteredItems : DEFAULT_WIDGET_CONFIG.settings.stock.items;
+              // Migration: auto-inject CAC 40 for existing users who don't have it yet
+              const hasCac40 = baseItems.some((i: any) => i.symbol === '^FCHI');
+              const finalItems = hasCac40
+                ? baseItems
+                : [{ symbol: '^FCHI', name: 'CAC 40', type: 'etf' as const }, ...baseItems];
+              return { ...merged, items: finalItems };
             })(),
             news: { ...DEFAULT_WIDGET_CONFIG.settings.news, ...parsed.settings?.news },
             currency: { ...DEFAULT_WIDGET_CONFIG.settings.currency, ...parsed.settings?.currency },

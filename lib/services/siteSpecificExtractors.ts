@@ -85,8 +85,56 @@ export const SITE_EXTRACTORS: SiteExtractor[] = [
       /<div[^>]*class=["'][^"']*article-body-commercial-selector[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
       /<div[^>]*class=["'][^"']*content__article-body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     ],
-    requireSelectors: [
-      '.dcr-1kas69x', // Guardian specific
+    requiresBypass: false,
+  },
+
+  // Le Parisien
+  {
+    domain: 'leparisien.fr',
+    contentSelector: [
+      /<div[^>]*class=["'][^"']*article[^"']*body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*class=["'][^"']*story[^"']*content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      /<article[^>]*>([\s\S]*?)<\/article>/i,
+    ],
+    removeSelectors: [
+      '.paywall',
+      '.premium-lock',
+      '.subscribe',
+    ],
+    requiresBypass: true,
+  },
+
+  // Les Échos
+  {
+    domain: 'lesechos.fr',
+    contentSelector: [
+      /<div[^>]*class=["'][^"']*article[^"']*content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*class=["'][^"']*article[^"']*body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      /<article[^>]*>([\s\S]*?)<\/article>/i,
+    ],
+    removeSelectors: [
+      '.paywall',
+      '.article-paywall',
+    ],
+    requiresBypass: true,
+  },
+
+  // 20 Minutes (public, no paywall)
+  {
+    domain: '20minutes.fr',
+    contentSelector: [
+      /<div[^>]*class=["'][^"']*content[^"']*article[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      /<article[^>]*>([\s\S]*?)<\/article>/i,
+    ],
+    requiresBypass: false,
+  },
+
+  // BFM TV (public, no paywall)
+  {
+    domain: 'bfmtv.com',
+    contentSelector: [
+      /<div[^>]*class=["'][^"']*article[^"']*content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      /<article[^>]*>([\s\S]*?)<\/article>/i,
     ],
     requiresBypass: false,
   },
@@ -113,7 +161,9 @@ export function extractWithSitePattern(html: string, extractor: SiteExtractor): 
   console.log(`[SiteExtractor] Using patterns for ${extractor.domain}`);
 
   for (const pattern of extractor.contentSelector) {
-    const match = html.match(pattern);
+    // Always use exec() — match() with g flag drops capture groups
+    const re = new RegExp(pattern.source, pattern.flags.replace('g', ''));
+    const match = re.exec(html);
     if (match && match[1]) {
       const content = match[1];
       const textLength = content.replace(/<[^>]+>/g, '').trim().length;

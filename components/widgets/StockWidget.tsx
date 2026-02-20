@@ -17,6 +17,7 @@ interface StockQuote {
   low: number;
   open: number;
   prevClose: number;
+  isIndex?: boolean; // true for market indices (CAC 40, etc.)
 }
 
 interface StockWidgetProps {
@@ -33,8 +34,51 @@ export function StockWidget({ compact, expanded }: StockWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Indices (^FCHI) and European stocks (.PA, .DE…) use Yahoo Finance — no API key needed
+  const needsYahooFinance = (symbol: string) => symbol.startsWith('^') || symbol.includes('.');
+
+  const hasYahooItems = items.some(i => needsYahooFinance(i.symbol));
+  const hasStockItems = items.some(i => !needsYahooFinance(i.symbol));
+
+  const fetchFromYahooFinance = async (symbol: string, name: string): Promise<StockQuote | null> => {
+    try {
+      const encoded = encodeURIComponent(symbol);
+      // v8 chart endpoint — more reliable than v7 quote in 2025+
+      const response = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=1d&range=1d`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+            'Accept': 'application/json',
+          },
+        }
+      );
+      if (!response.ok) return null;
+      const data = await response.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (!meta?.regularMarketPrice) return null;
+      const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? meta.regularMarketPrice;
+      const change = meta.regularMarketPrice - prevClose;
+      return {
+        symbol,
+        name,
+        current: meta.regularMarketPrice,
+        change,
+        changePercent: prevClose > 0 ? (change / prevClose) * 100 : 0,
+        high: meta.regularMarketDayHigh ?? 0,
+        low: meta.regularMarketDayLow ?? 0,
+        open: meta.regularMarketOpen ?? meta.regularMarketPrice,
+        prevClose,
+        isIndex: symbol.startsWith('^'),
+      };
+    } catch {
+      return null;
+    }
+  };
+
   const fetchStocks = useCallback(async () => {
-    if (!apiKey) return;
+    const hasAnyItems = hasYahooItems || (hasStockItems && !!apiKey);
+    if (!hasAnyItems) return;
     try {
       setLoading(true);
       setError(false);
@@ -42,23 +86,30 @@ export function StockWidget({ compact, expanded }: StockWidgetProps) {
       const results: StockQuote[] = [];
 
       for (const item of items) {
-        const response = await fetch(
-          `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(item.symbol)}&token=${encodeURIComponent(apiKey)}`
-        );
-        if (!response.ok) continue;
-        const data = await response.json();
-        if (data.c && data.c > 0) {
-          results.push({
-            symbol: item.symbol,
-            name: item.name,
-            current: data.c,
-            change: data.d ?? 0,
-            changePercent: data.dp ?? 0,
-            high: data.h ?? 0,
-            low: data.l ?? 0,
-            open: data.o ?? 0,
-            prevClose: data.pc ?? 0,
-          });
+        if (needsYahooFinance(item.symbol)) {
+          // Indices and European stocks use Yahoo Finance (no API key needed)
+          const quote = await fetchFromYahooFinance(item.symbol, item.name);
+          if (quote) results.push(quote);
+        } else if (apiKey) {
+          // Regular stocks use Finnhub
+          const response = await fetch(
+            `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(item.symbol)}&token=${encodeURIComponent(apiKey)}`
+          );
+          if (!response.ok) continue;
+          const data = await response.json();
+          if (data.c && data.c > 0) {
+            results.push({
+              symbol: item.symbol,
+              name: item.name,
+              current: data.c,
+              change: data.d ?? 0,
+              changePercent: data.dp ?? 0,
+              high: data.h ?? 0,
+              low: data.l ?? 0,
+              open: data.o ?? 0,
+              prevClose: data.pc ?? 0,
+            });
+          }
         }
       }
 
@@ -69,20 +120,28 @@ export function StockWidget({ compact, expanded }: StockWidgetProps) {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, items]);
+  }, [apiKey, items, hasYahooItems, hasStockItems]);
 
   useEffect(() => {
-    if (apiKey) {
+    const hasAnyItems = hasYahooItems || (hasStockItems && !!apiKey);
+    if (hasAnyItems) {
       fetchStocks();
       const interval = setInterval(fetchStocks, 5 * 60 * 1000);
       return () => clearInterval(interval);
     }
-  }, [fetchStocks, apiKey]);
+  }, [fetchStocks, apiKey, hasYahooItems, hasStockItems]);
 
   const styles = createStyles(colors, compact, expanded);
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formatPrice = (price: number, index?: boolean) => {
+    const formatted = price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return index ? formatted : formatted;
+  };
+
+  const priceUnit = (stock: StockQuote): string => {
+    if (stock.isIndex) return ' pts';
+    if (stock.symbol.includes('.')) return ' €'; // Euronext, LSE, etc.
+    return ' $';
   };
 
   const formatChange = (change: number) => {
@@ -90,7 +149,8 @@ export function StockWidget({ compact, expanded }: StockWidgetProps) {
     return `${sign}${change.toFixed(2)}%`;
   };
 
-  if (!apiKey) {
+  // Only block if there are no Yahoo Finance items and no API key for US stocks
+  if (!apiKey && !hasYahooItems) {
     return (
       <WidgetContainer title="Bourse" icon="trending-up" compact={compact} expanded={expanded}>
         <Text style={styles.errorText}>Clé API requise (Réglages)</Text>
@@ -124,7 +184,7 @@ export function StockWidget({ compact, expanded }: StockWidgetProps) {
       <WidgetContainer title="Bourse" icon="trending-up" compact>
         <View style={styles.compactContent}>
           <Text style={styles.compactSymbol}>{main.name}</Text>
-          <Text style={styles.compactPrice}>{formatPrice(main.current)} $</Text>
+          <Text style={styles.compactPrice}>{formatPrice(main.current)}{priceUnit(main)}</Text>
           <View style={[styles.compactBadge, main.changePercent >= 0 ? styles.positive : styles.negative]}>
             <Ionicons
               name={main.changePercent >= 0 ? 'arrow-up' : 'arrow-down'}
@@ -154,7 +214,7 @@ export function StockWidget({ compact, expanded }: StockWidgetProps) {
                 {expanded && <Text style={styles.stockSymbol}>{stock.symbol}</Text>}
               </View>
               <View style={styles.priceSection}>
-                <Text style={styles.stockPrice}>{formatPrice(stock.current)} $</Text>
+                <Text style={styles.stockPrice}>{formatPrice(stock.current)}{priceUnit(stock)}</Text>
                 <View style={[styles.changeBadge, stock.changePercent >= 0 ? styles.positive : styles.negative]}>
                   <Ionicons
                     name={stock.changePercent >= 0 ? 'arrow-up' : 'arrow-down'}

@@ -224,6 +224,33 @@ export const PRESET_ETFS: StockItem[] = [
   { symbol: 'VTI', name: 'Total Market', type: 'etf' },
 ];
 
+// Preset market indices (use Yahoo Finance, no API key needed)
+export const PRESET_INDICES: StockItem[] = [
+  { symbol: '^FCHI', name: 'CAC 40', type: 'etf' },
+  { symbol: '^STOXX50E', name: 'Euro Stoxx 50', type: 'etf' },
+  { symbol: '^GDAXI', name: 'DAX (Allemagne)', type: 'etf' },
+  { symbol: '^FTSE', name: 'FTSE 100 (UK)', type: 'etf' },
+];
+
+// CAC 40 individual stocks (Euronext Paris — Yahoo Finance, no API key needed)
+export const PRESET_CAC40_STOCKS: StockItem[] = [
+  { symbol: 'MC.PA', name: 'LVMH', type: 'stock' },
+  { symbol: 'TTE.PA', name: 'TotalEnergies', type: 'stock' },
+  { symbol: 'OR.PA', name: "L'Oréal", type: 'stock' },
+  { symbol: 'RMS.PA', name: 'Hermès', type: 'stock' },
+  { symbol: 'SAN.PA', name: 'Sanofi', type: 'stock' },
+  { symbol: 'AIR.PA', name: 'Airbus', type: 'stock' },
+  { symbol: 'BNP.PA', name: 'BNP Paribas', type: 'stock' },
+  { symbol: 'SU.PA', name: 'Schneider Electric', type: 'stock' },
+  { symbol: 'AI.PA', name: 'Air Liquide', type: 'stock' },
+  { symbol: 'CS.PA', name: 'AXA', type: 'stock' },
+  { symbol: 'KER.PA', name: 'Kering', type: 'stock' },
+  { symbol: 'CAP.PA', name: 'Capgemini', type: 'stock' },
+  { symbol: 'BN.PA', name: 'Danone', type: 'stock' },
+  { symbol: 'ENGI.PA', name: 'Engie', type: 'stock' },
+  { symbol: 'ORA.PA', name: 'Orange', type: 'stock' },
+];
+
 // News categories
 export const NEWS_CATEGORIES: { value: NewsCategory; label: string }[] = [
   { value: 'general', label: 'Général' },
@@ -278,9 +305,9 @@ export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
     },
     stock: {
       items: [
+        { symbol: '^FCHI', name: 'CAC 40', type: 'etf' },
         { symbol: 'AAPL', name: 'Apple', type: 'stock' },
         { symbol: 'MSFT', name: 'Microsoft', type: 'stock' },
-        { symbol: 'GOOGL', name: 'Google', type: 'stock' },
       ],
     },
     news: {

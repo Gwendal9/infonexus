@@ -36,6 +36,62 @@ const HISTORY_EVENTS: Record<string, HistoryEvent[]> = {
     { year: 1876, text: "Alexander Graham Bell dépose le brevet du téléphone." },
     { year: 2005, text: "YouTube est fondé par Chad Hurley, Steve Chen et Jawed Karim." },
   ],
+  '02-15': [
+    { year: 1564, text: "Naissance de Galilée, astronome et physicien italien." },
+    { year: 1971, text: "Le Royaume-Uni adopte le système décimal pour sa monnaie." },
+  ],
+  '02-17': [
+    { year: 1600, text: "Giordano Bruno est brûlé vif pour ses théories héliocentristes." },
+    { year: 1933, text: "Newsweek est fondé aux États-Unis." },
+  ],
+  '02-18': [
+    { year: 1930, text: "Découverte de la planète Pluton par Clyde Tombaugh." },
+    { year: 2001, text: "Mort de Dale Earnhardt lors des 500 miles de Daytona." },
+  ],
+  '02-19': [
+    { year: 1945, text: "Débarquement américain sur l'île d'Iwo Jima (Pacifique, WWII)." },
+    { year: 1473, text: "Naissance de Nicolas Copernic, astronome polonais." },
+  ],
+  '02-20': [
+    { year: 1962, text: "John Glenn devient le premier Américain à orbiter autour de la Terre." },
+    { year: 1792, text: "George Washington signe l'acte fondateur du service postal américain." },
+  ],
+  '02-21': [
+    { year: 1965, text: "Assassinat de Malcolm X à New York." },
+    { year: 1848, text: "Publication du Manifeste du Parti communiste par Marx et Engels." },
+  ],
+  '02-22': [
+    { year: 1732, text: "Naissance de George Washington, premier président des États-Unis." },
+    { year: 1997, text: "Annonce du clonage de la brebis Dolly." },
+  ],
+  '02-23': [
+    { year: 1945, text: "Photographie emblématique du drapeau américain planté à Iwo Jima." },
+    { year: 1836, text: "Début du siège de Fort Alamo au Texas." },
+  ],
+  '02-24': [
+    { year: 1582, text: "Promulgation du calendrier grégorien par le pape Grégoire XIII." },
+    { year: 2022, text: "Invasion de l'Ukraine par la Russie." },
+  ],
+  '02-25': [
+    { year: 1986, text: "Chute du régime de Ferdinand Marcos aux Philippines." },
+    { year: 1964, text: "Cassius Clay (Muhammad Ali) devient champion du monde de boxe." },
+  ],
+  '02-26': [
+    { year: 1993, text: "Attentat à la bombe au World Trade Center de New York." },
+    { year: 1935, text: "Robert Watson-Watt présente le premier radar fonctionnel." },
+  ],
+  '02-27': [
+    { year: 1933, text: "Incendie du Reichstag à Berlin, prétexte au régime nazi." },
+    { year: 1560, text: "Traité d'Édimbourg mettant fin à la présence française en Écosse." },
+  ],
+  '02-28': [
+    { year: 1953, text: "Watson et Crick découvrent la double hélice de l'ADN." },
+    { year: 1986, text: "Assassinat d'Olof Palme, Premier ministre suédois." },
+  ],
+  '02-29': [
+    { year: 1504, text: "Christophe Colomb prédit l'éclipse lunaire pour tromper les Jamaïcains." },
+    { year: 1960, text: "Séisme catastrophique d'Agadir au Maroc." },
+  ],
   '03-08': [
     { year: 1917, text: "Début de la Révolution de Février en Russie." },
     { year: 1975, text: "L'ONU proclame le 8 mars Journée internationale des femmes." },
@@ -104,9 +160,9 @@ const HISTORY_EVENTS: Record<string, HistoryEvent[]> = {
 
 // Fallback events for dates not in the database
 const FALLBACK_EVENTS: HistoryEvent[] = [
-  { year: 1969, text: "Neil Armstrong marche sur la Lune le 20 juillet 1969." },
-  { year: 1989, text: "Le mur de Berlin tombe le 9 novembre 1989." },
-  { year: 2001, text: "Wikipédia est lancé le 15 janvier 2001." },
+  { year: 1969, text: "Premier alunissage : Neil Armstrong et Buzz Aldrin marchent sur la Lune." },
+  { year: 1989, text: "La chute du mur de Berlin marque la fin de la guerre froide en Europe." },
+  { year: 1953, text: "Watson et Crick découvrent la structure en double hélice de l'ADN." },
 ];
 
 interface HistoryWidgetProps {
